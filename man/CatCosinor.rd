@@ -140,10 +140,10 @@
                 #        (use filePath format for your OS)
                 # filePath<-"~/file/path/Installing CAT/Vignette0"          # use for mac
                 # filePath<-"c:\\file\\path\\Installing CAT\\Vignette0"     # use for PC
-                # fileName<-file.path(filePath,'clgi001.dat')
+                # fileName<-file.path(filePath,'CLGi001.dat')
                 
                 # this line is used instead of the above since it is part of a package.
-                fileName<-system.file("extdata", "clgi001.dat", package = "CATkit")
+                fileName<-system.file("extdata", "CLGi001.dat", package = "CATkit")
                 #  
                 CATCosinor(TimeCol=2,Y=c(4,6,7), Components=3, window="noTaper", RefDateTime
                   ="201302030000",  timeFormat="\%Y\%m\%d\%H\%M",RangeDateTime =list(Start=0, 

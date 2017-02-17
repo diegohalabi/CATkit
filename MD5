@@ -1,4 +1,4 @@
-87616ce6b9f35070ac248b56ff457e90 *DESCRIPTION
+a5804d0d435107cc26a1ddc52652fe2a *DESCRIPTION
 b44902ca56a72376bdb78084053c6094 *NAMESPACE
 80f8025f8d20e132d4c2e23f896027f0 *R/Actogram.R
 a6173350f7a0f0adcd48b0013bfb816d *R/AutoCorr.R
@@ -24,4 +24,4 @@ e2413ceb88750cc19c39ea2831cac6bd *R/Import.R
 1be02663e33eeb1e54130a7ce380e051 *inst/pngFiles/ParameterTemplate.png
 8236a29d8b947e4069efd3db69c70db9 *man/CATkit-package.Rd
 327c50c62ec7509a2f9029f41e645eb5 *man/CatCall.rd
-4034af799eb24b0ad1be228002582d8a *man/CatCosinor.rd
+db673d08b8b193f4c9c5671ce961e14c *man/CatCosinor.rd
