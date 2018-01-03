@@ -4,9 +4,8 @@
 \title{ Cosinor Analysis
         %%  ~~function to do ... ~~
 }
-\description{ Perform one of various cosinor analyses:  single cosinor, least squares spectrum by cosinor, multiple-component cosinor, progressive single cosinor, progressive least square spectrum, progressive multiple-component cosinor.
+\description{ Performs one of various cosinor-based analyses:  single cosinor, least squares spectrum, multiple-component cosinor, progressive single cosinor, chronobiologic serial section (single- or multiple-component model), gliding spectrum.
               
-              (** In time formats such as "_Y_m_d_H_M", the underscore, "_", symbol represents a percent sign - which is not allowed in this help file)
               %%  ~~ A concise (1-5 lines) description of what the function does. ~~
 }
 \usage{  
@@ -20,58 +19,61 @@
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{TimeCol}{Column number where time is found. Time format of the TimeCol is given by timeFormat parameter. Time is read to the minute. Seconds are discarded. Date and Time can be in any column, in any of three formats (seconds are discarded):  
-                   1)  numeric (in number of hours from starting time); 
-2)  a one column date/time format, where the format is specified by the parameter timeFormat; or
-3)  a two column format consisting of Date in the first of the 2 columns specified, and Time in the second:  c(3,6);  where the format is specified by the parameter timeFormat
+  \item{TimeCol}{Column number where time is found. Time format of the TimeCol is given by timeFormat parameter. Time is read to the minute. Seconds are discarded. Date and Time can be in any column.  Valid values are as follows:  
+                   1)  "numeric":  numeric (in number of hours from starting time); timeFormat may be ignored.
+2)  A scalar:  If date/time is in one column; or
+3)  A vector:  If date/time are in two column, Date must be in the first of the 2 columns specified, and Time in the second, i.e.,  c(3,6).
 
 %%     ~~Describe \code ~~
   }
 
-\item{Y}{The column number(s) of the data to be analyzed.  This is a numeric, either scalar or vector.  May use any valid R expression, such as c(4,5) or a single number.
+\item{Y}{The column number(s) of the data to be analyzed.  This is a numeric, either scalar or vector.  May use any valid R vector, such as c(4,5) or a single number.
          %%     ~~Describe \code ~~
 }
-\item{Components}{Default=1.  Indicates if this is a single or multiple component cosinor analysis, where the number of components is specified (>0).  If doing a single component cosinor, set Components=1.  If doing a multiple components model, set Components equal to the number of frequencies in the model.  
+\item{Components}{Default=1.  Indicates if this is a single or multiple component cosinor analysis, where the number of components is specified (0 is invalid).  If doing a single component cosinor, set Components=1.  If doing a multiple components model, set Components equal to the number of frequencies in the model.  
                   %%     ~~Describe \code here~~
 }
-\item{window}{Valid windowing function to be applied are:  "noTaper","Hanning","Hamming","Bartlett","Blackman"
+\item{window}{Valid windowing function to be applied are:  "noTaper","Hanning","Hamming", "Bartlett","Blackman"
               %%     ~~Describe \code{ } here~~
 }
 \item{RefDateTime}{Date used as reference, and subtracted from all data dates, to make the number smaller.  **Must be in the same time zone!!!!!**
-                     if RefDateTime = NA, uses the 1st date of the data as the RefDateTime  
-                   if RefDateTime = 0, uses midnight of the same day as the data starts 
+                     If RefDateTime = NA, uses the 1st date of the data as the RefDateTime.  
+                   If RefDateTime = 0, uses midnight of the same day as start-of-data. 
                    %%     ~~Describe \code{ } here~~
 }
 \item{timeFormat}{Can be "numeric", or any valid R time conversion specification,  i.e., "\%Y\%m\%d\%H\%M".  See strptime for conversion specifications.
+                If timeFormat= "numeric", time column in data file can be simple numbers (0 - 99999...) in Units from a reference time.
+                If timeFormat= "numeric", the data are sorted by time to be sure they are ordered ascending.  First must be smallest , and last largest.
+                  Time can also be in two columns (indicate in TimeCol  Ex:  c(1,2));  timeFormat is ignored when time is in two columns -- the format use is \%d/\%m/\%y in the first of the two columns, and \%H:\%M:\%S or \%H:\%M in the second of the two
 }
 
-\item{RangeDateTime}{specify in the form of a list:  RangeDateTime=list(Start=12, End=0)      
-                     $Start:  Analysis is started at this date/time.  May be before 1st data date.
-                     if Start = NA, uses the 1st data point as the StartDate
-                     if Start =  0, uses Midnight at the start of the 1st date of the data as the StartDate 
-                     $End:    Analysis ends at this date/time.  May be after last data date.
-                     if End =  NA, use the last data point as the EndDate
-                     if End =  0 uses the midnight at the end of the last date of the data as the EndDate   
+\item{RangeDateTime}{Specify in the form of a list:  RangeDateTime=list(Start=12, End=0).      
+                     $Start:  Analysis is started at $Start.  $Start may be before the 1st data date.
+                     If $Start = NA, the 1st data point is used as the StartDate.
+                     if $Start =  0, midnight of the 1st date is used as the StartDate. 
+                     $End:    Analysis ends at $End.  $End may be after the last data date.
+                     if $End =  NA, the last data point is used as the EndDate.
+                     if $End =  0, midnight at the end of the last date is used as the EndDate.   
                      %%     ~~Describe \code{k} here~~
 }
-\item{Units}{Units (Hour, Year, Week or Day) for use by Interval and Increment arguments, as well as Period arguments (Note: only Hour is currently implemented.)
+\item{Units}{Units (hours, years, weeks or days) for use by Interval and Increment arguments, as well as Period arguments (Note: only Hour is currently implemented.)
              %%     ~~Describe \code{yLab} here~~
 }
-\item{dt}{When equidistant data, dt indicates the sampling interval.  If dt =0, no periodogram is done.  Data is assumed to be equidistant when this is nonzero.
+\item{dt}{When equidistant data, dt indicates the sampling interval. Data are assumed to be equidistant when this is nonzero.
           %%     ~~Describe \code{modulo} here~~
 }
-\item{Progressive}{specify in the form of a list:  Progressive=list(Interval=0, Increment=0)
-                   $Interval: length of the time span being analyzed (in Units) -- multiple spans calculated
-                   If 0, assumes no progression, Interval is set to the full dataset length, and Increment = full data set  
-                   $Increment: number of Days, Wks or Yrs  (uses same unit as set for Interval) to shift forward for each successive Interval analyses
-                   If 0, assumes no progression, Interval is set to the full dataset length, and Increment = full data set 
+\item{Progressive}{Specify in the form of a list:  Progressive=list(Interval=0, Increment=0).
+                   $Interval: length of the time span being analyzed (in Units) -- multiple are spans calculated.
+                   If 0, no progression is assumed; Interval is set to the full dataset length, and Increment = full data set.
+                   $Increment: (uses same Units as set for Interval) to shift forward for each successive Interval analyses.
+                   If 0, no progression is assumed; Interval is set to the full dataset length, and Increment = full data set 
                    %%     ~~Describe \code{ } here~~
 }
-\item{Period}{specify in the form of a list:   Period=list(Set=0,Start=0,Increment=1,End=0)
-              $Start : [only used if $Set=0]  First (and largest) period to calculate, in units of Days, Wks or Yrs (as set by Units);  (Interval/1).   0 is Default: the full time range of the data file is analyzed [in hours] (RangeDateTime$End-RangeDateTime$Start)= MyData_length; or if progressive, Interval/1;  
-              $Increment : [only used if $Set=0] Increment to starting period, in units of Days, Wks or Yrs (as set by Units).  Defaults to 1;   0 is invalid  -- default will be used
-              $End : [only used if $Set=0]  Last (and smallest) period to calculate, in units of Days, Wks or Yrs (as set by Units), EXCLUSIVE.  Defaults to 2*dt or 4;  (1 is too small) 0 is invalid  -- default will be used
-              $Set :  If Set=0, a series of periods are analyzed (spectrum) according to Period$Start, $Increment, $End (or their default value, if not specified).  If not equal to 0, overrides Period$Start and $Increment, to completely specify a set of periods to analyze (as set by Units), ending at $End.  Can be in the format of a single number, a vector, or R expression:  c(1,2,3) or c(8,12:24) or seq(1,50, by=.75).  When Components=1, each period specified in the vector will be assessed by cosinor independently.  When parameter Components is >1, Period$Set must have a corresponding number of components, which are assessed together in a multiple component cosinor.    When 0, only the largest period, or the largest period per Interval, from a spectrum is listed on page 1 of the graphics output file.  Otherwise, all periods are displayed in the graphic file.    
+\item{Period}{Specify in the form of a list:   Period=list(Set=0,Start=0,Increment=1,End=0).
+              $Start : [only used if $Set=0];  this is the first (and longest) period to calculate, in units  (as set by Units);  (Interval/1).   0 is Default: the full time range of the data file is analyzed [in hours]. (RangeDateTime$End-RangeDateTime$Start)= MyData_length; or if progressive, Interval/1.  
+              $Increment : [only used if $Set=0] Increment from the starting period, in units (as set by Units).  Defaults to 1;   0 is invalid  -- default will be used in that case.
+              $End : [only used if $Set=0]  Last (and smallest) period to calculate, in units (as set by Units), EXCLUSIVE.  Defaults to 4;  0 is invalid  -- default will be used in that case.
+              $Set :  If Set=0, a series of periods are analyzed (spectrum) according to Period$Start, $Increment, $End (or their default value, if not specified).  If Set is not equal to 0, it overrides Period$Start and $Increment, to completely specify a set of periods to analyze (as set by Units), ending at $End.  $Set can be in the format of a single number, a vector, or R expression:  c(1,2,3) or c(8,12:24) or seq(1,50, by=.75).  When Components=1, each period specified in the vector will be assessed by cosinor independently.  When parameter Components is >1, Period$Set must have a corresponding number of components, which are assessed together in a multiple-component cosinor.    When 0, only the longest period, or the longest period per Interval, from a spectrum is listed on page 1 of the graphics output file.  Otherwise, all periods are displayed in the graphic file.    
               %%     ~~Describe \code{ } here~~
 }
 \item{header}{ T/F to indicate if the file has a header.  Headers are used as variable names.
@@ -80,13 +82,13 @@
 \item{Skip}{ How many lines to skip at the top of the file (before the header). The header will be read next, after Skip lines are skipped (if header=TRUE). 
              %%     ~~Describe \code{ } here~~
 }
-\item{Colors}{Colors for a heatmap.  "Heat" renders the heat map in colors;  "BW" renders the heatmap in grayscale
+\item{Colors}{Colors for a heatmap.  "Heat" renders the heatmap in colors;  "BW" renders the heatmap in grayscale
               %%     ~~Describe \code{ } here~~
 }
 \item{Graphics}{The main results of CATCosinor are sent to a graphic file when Console=F.  Default file output type is "pdf".   Possible values: "jpg, pdf, tiff, png".   
                 %%     ~~Describe \code{ } here~~
 }
-                \item{Output}{Specify in the form of a list:  list(Txt=F,Dat=T, Doc=T,Graphs=F).  $Txt=T will capture the console output to a .txt file.  $Dat=T will generate a .txt computer-readable file of tab delimited cosinor results: MESOR, Amplitude, Phase, standard error values, and others. It is useful for subsequent processing (by CAT, or excel, for example).  $Doc=T will generate a nicely-formatted .rtf file, also readable by Word.  $Graphs will enable a set of graphs plotting Data, Model, MESOR, Amplitude, Acrophase over time, or a heatmap.  The exact files generated will vary with the functions performed.  Heatmaps are only created when a progressive analysis of (single component) multiple frequencies is performed. $Graphs=F will disable printing of graphs for faster processing, if you do not need the files.
+                \item{Output}{Specify in the form of a list:  list(Txt=F,Dat=T, Doc=T,Graphs=F).  $Txt=T will capture the console output to a .txt file.  $Dat=T will generate a .txt computer-readable file of tab delimited cosinor results: MESOR, Amplitude, Phase, standard error values, and others. It is useful for subsequent processing (by CAT, or excel, for example).  $Doc=T will generate a nicely-formatted .rtf file, also readable by Word.  $Graphs will enable a set of graphs plotting Data, Model, MESOR, Amplitude, Acrophase over time, or a heatmap.  The exact files generated will vary with the functions performed.  Heatmaps are only created when a progressive analysis least squares spectra is performed. $Graphs=F will disable printing of graphs for faster processing, if you do not need the files.
                 %%     ~~Describe \code{ } here~~
                 }
 \item{yLabel}{Label for the Y axis on data graphs.  If this is left blank (the default="") then the column headers are used for Y axis label.
@@ -121,7 +123,7 @@
                 \references{http://564394709114639785.weebly.com/running-cat.html
                 %% ~put references to the literature/web site here ~
                 }
-                \author{Cathy Lee Gierke, Germaine Cornelissen-Guillaume, John A Lindgren, Ruth Ann Helget
+                \author{Cathy Lee Gierke, Ruth Ann Helget, Germaine Cornelissen-Guillaume
                 
                 Maintainer: \email{ <leegi001@umn.edu>}
                 }
@@ -143,7 +145,13 @@
                 # fileName<-file.path(filePath,'CLGi001.dat')
                 
                 # this line is used instead of the above since it is part of a package.
-                fileName<-system.file("extdata", "CLGi001.dat", package = "CATkit")
+                file.copy(system.file("extdata", "CLGi001.dat", package = "CATkit"), 
+                    tempdir(), overwrite = TRUE, recursive = FALSE, copy.mode = TRUE, 
+                    copy.date = FALSE)
+                filePath<-tempdir()
+                fileName<-file.path(filePath,'CLGi001.dat')
+
+                #fileName<-system.file("extdata", "CLGi001.dat", package = "CATkit")
                 #  
                 CATCosinor(TimeCol=2,Y=c(4,6,7), Components=3, window="noTaper", RefDateTime
                   ="201302030000",  timeFormat="\%Y\%m\%d\%H\%M",RangeDateTime =list(Start=0, 
@@ -162,7 +170,13 @@
                 # fileName<-file.path(filePath,'Signal10-20.txt')
                 
                 # this line is used instead of the above since it is part of a package.
-                fileName<-system.file("extdata", "Signal10-20.txt", package = "CATkit")
+                file.copy(system.file("extdata", "Signal10-20.txt", package = "CATkit"), 
+                    tempdir(), overwrite = TRUE, recursive = FALSE, copy.mode = TRUE, 
+                    copy.date = FALSE)
+                filePath<-tempdir()
+                fileName<-file.path(filePath,'Signal10-20.txt')
+
+                #fileName<-system.file("extdata", "Signal10-20.txt", package = "CATkit")
                 #
                 CATCosinor(TimeCol=1,Y=2, Components=1, window="noTaper", RefDateTime="0",
                 timeFormat="\%Y\%m\%d\%H\%M", RangeDateTime=list(Start=0, End=0), 
@@ -180,7 +194,13 @@
                 # fileName<-file.path(filePath,'FWedited.txt')
                 #
                 # this line is used instead of the above since it is part of a package.
-                fileName<-system.file("extdata", "FWedited.txt", package = "CATkit")
+                file.copy(system.file("extdata", "FWedited.txt", package = "CATkit"), 
+                    tempdir(), overwrite = TRUE, recursive = FALSE, copy.mode = TRUE, 
+                    copy.date = FALSE)
+                filePath<-tempdir()
+                fileName<-file.path(filePath,'FWedited.txt')
+
+                #fileName<-system.file("extdata", "FWedited.txt", package = "CATkit")
                 #
                 CATCosinor(TimeCol=1,Y=2, Components=1, window="noTaper",RefDateTime 
                 ="199210192152",  timeFormat="\%Y\%m\%d\%H\%M", RangeDateTime= list(Start

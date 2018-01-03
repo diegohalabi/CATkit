@@ -21,8 +21,7 @@ These instructions assume you have R and RStudio installed.   If you have \cf4 a
 
 \f1 \cf7 Note for Mac users: \'a0To avoid unpacking the tar.gz on download, right click (2-finger click) on filename and "Download Linked File As...". \'a0Or you can turn off unpacking in Safari: \'a0http://apple.stackexchange.com/questions/961/how-to-stop-safari-from-unzipping-files-after-download
 \f0\b \cf2 \
-\pard\pardeftab720
-\cf2 \
+\
 -----------------------------------------\
 Detailed Installation Instructions  \
 \pard\pardeftab720\sl420
@@ -42,9 +41,6 @@ Read Me.rtf\
 \pard\tx220\tx720\pardeftab720\li720\fi-720\sl420
 \ls1\ilvl0\cf2 {\listtext	\'95	}\'a0 First, follow the instructions in "Installing Packages vx.x.pdf"\
 {\listtext	\'95	}\'a0 Second, install CATkit package below following instructions in "Installing CAT from tar.pdf" \'a0 (This also includes instructions for running Vignettes.)\
-\pard\pardeftab720\sl420
-\cf2 \
-With gratitude to the Alessandro Bartolomucci lab for sharing murine activity data for use in these {\field{\*\fldinst{HYPERLINK "http://564394709114639785.weebly.com/vignettes.html"}}{\fldrslt \cf8 vignettes}}.\
 \pard\pardeftab720
 \cf2 \
 \pard\pardeftab720\sl420
@@ -76,15 +72,16 @@ FWedited.txtnoTaper--[date]Vignette2Cos.dat\'a0 \'a0\'a0 \
 \b Vignette 3: \'a0
 \b0 Performs smoothing, actogram, autocorrelation and crosscorrelation on two sets of murine activity data, comparing phase difference.\
 data: \'a0 \'a0 \'a0good-6d-2m-part.txt\'a0\
-\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 activity stress c57--stress copy2-part.txt\
-output:\'a0 activity stress c57--stress copy2-part.txt--[date]output.pdf\'a0\
+\'a0 \'a0 \'a0 \'a0 \'a0 \'a0 \'a0 activity-stress-c57-2-part.txt\
+output:\'a0 activity-stress-c57-2-part.txt--[date]output.pdf\'a0\
 \
-With gratitude to the Alessandro Bartolomucci lab for sharing murine activity data for use in these vignettes.\
+With gratitude to the Alessandro Bartolomucci lab for sharing murine activity data for use in this vignette.\
 \pard\pardeftab720
 \cf2 --------------------------------------------------------------\
 --------------------------------------------------------------\
+\pard\pardeftab720
 
-\b QuickStart Installation Instructions
+\b \cf2 QuickStart Installation Instructions
 \b0 \
 \
 These instructions assume you have R and RStudio installed. \'a0\
@@ -108,7 +105,7 @@ In RStudio, in the lower right window, click on the Packages tab, search for eac
 \
 \'a0 \'a0 stats utils MASS graphics season rtf png grDevices signal magic\
 \
-(If you are asked which server to load from, pick one that is recommended, or nearby). The top field, Install From, should say CRAN. \'a0(If you are asked which server to load from, pick one that is recommended, or nearby). \'a0You can normally accept all the defaults, and click the Install button. \'a0After installing these, check the box beside the name of each of the above in the Packages tab. \'a0This will load them for use.\'a0\
+The top field, Install From, should say CRAN. \'a0(If you are asked which server to load from, pick one that is recommended, or nearby). \'a0You can normally accept all the defaults, and click the Install button. \'a0After installing these, check the box beside the name of each of the above in the Packages tab. \'a0This will load them for use.\'a0\
 \
 
 \b Installing CAT
@@ -131,21 +128,21 @@ In RStudio, in the right hand window, go to the Packages tab, click on Install P
 \b \cf9 Step 4: \'a0Running Vignettes
 \b0 \
 After installation, you can run some tests to see sample outputs\
-Download\'a0{\field{\*\fldinst{HYPERLINK "http://564394709114639785.weebly.com/uploads/4/6/0/5/4605921/installing_cat.zip"}}{\fldrslt 
-\b \ul installing_CAT.zip}}\'a0and unzip to a known location. \'a0In the "Installing CAT" folder, follow instructions on page 2 of "Installing CAT from tar.pdf ". \'a0Compare your output file to those included in the download. \'a0If your output matches the sample file, you'll know the package is working correctly.\'a0\
+Download\'a0
+\b \ul \ulc9 installing_CAT.zip
+\b0 \ulnone \'a0and unzip to a known location. \'a0In the "Installing CAT" folder, follow instructions on page 2 of "Installing CAT from tar.pdf ". \'a0Compare your output file to those included in the download. \'a0If your output matches the sample file, you'll know the package is working correctly.\'a0\
 \
 
 \b Input File Formats
 \b0 \
-Input formats must meet the requirements described here. \'a0Examples can be found in the\'a0\'a0{\field{\*\fldinst{HYPERLINK "http://564394709114639785.weebly.com/uploads/4/6/0/5/4605921/installing_cat.zip"}}{\fldrslt 
-\b \ul installing_CAT.zip}}
-\b \'a0
+Input formats must meet the requirements described here. \'a0Examples can be found in the\'a0\'a0
+\b \ul installing_CAT.zip\ulnone \'a0
 \b0 download file, in the folder
 \b \'a0"
 \b0 Sample Formats". \'a0\cf2 See also sample input files in the vignettes folders found in that download, or on the {\field{\*\fldinst{HYPERLINK "http://564394709114639785.weebly.com/data-formats.html"}}{\fldrslt \cf8 Data Formats}} web page.\
 \pard\pardeftab720\sl420
 \cf2 \
-Date and Time can be in any column, in any of three formats (seconds are discarded): \'a0\
+Date and Time can be in any column, in any of three formats : \'a0\
 1) \'a0numeric (in number of hours from starting time); \'a0\
 2)\'a0
 \f1 \cf10  a one column date/time character string in any format, as specified by the timeFormat parameter\

@@ -2,12 +2,16 @@
 # importFrom(foo, f, g)  to get only the package
 export(CatCall)
 export(CATCosinor)
+export(pmc)
 import(MASS)  
 import(rtf)
 import(png)
 #import(multitaper)
 import(season)
 import(magic)
+import(assertr)
+#import(stringr)
+#import(assertive)
 #import(utils)
 #import(stats)
 #import(graphics)
@@ -30,7 +34,7 @@ importFrom("stats", "TukeyHSD", "acf", "aov", "ccf", "coefficients",
 
              "drop1", "end", "fft", "median", "model.tables",
 
-             "na.action", "na.omit", "pf", "ts", "var")
+             "na.action", "na.omit", "pf", "ts", "var", "qt")
 
-importFrom("utils", "read.table", "str", "tail", "write.table")
+importFrom("utils", "read.table", "str", "tail", "write.table","read.delim2")
 import(signal)

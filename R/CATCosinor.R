@@ -16,7 +16,7 @@ function (TimeCol=1,Y=2, Components=1, window="noTaper", RefDateTime=NA,  timeFo
   #         POSIXct: This class stores a date in a vector, as the number of seconds passed since January, 1st, 1970 at 1AM
   #         POSIXlt: This class stores a date in a list: (day of the month, day of the week, day of the year, month, year, time zone, hour, minute, second).
   # TimeCol:    Column(s) where time is found.  c(1,2) can be used when date is in column 1 and time is in column 2.  Date and time can be in any two columns, i.e., c(6,3). 
-  #             If time is in two columns, the formats should be %d/%m/%y in the first of the two columns, and %H:%M:%S in the second of the two
+  #             If time is in two columns, the input timeFormat should be specified.  (Internally it is converted to %Y%m%d%HH%MM.)
   #             (Any time format in timeFormat paramater is ignored in this case.)
   # Y:          Column holding data to be analyzed
   # Components:  Default=1.  Indicates if this is a single or multiple component cosinor analysis, where the number of components is specified (>0).  
@@ -102,7 +102,7 @@ function (TimeCol=1,Y=2, Components=1, window="noTaper", RefDateTime=NA,  timeFo
 
   #####################################################################################################
   #                                                                                                   #
-  #        Set up some initial parameter values, error messages, and key variables                    #
+  #        Set up some initial parameter values, error messages, and key variables, LCM               #
   #                                                                                                   #
   #####################################################################################################
   tz="GMT"
@@ -123,7 +123,7 @@ if (all(is.wholenumber(Period$Set))){
   tempPeriods<-round(Period$Set, digits=2)*fractionModifier
 }
 minPeriod<-min(Period$Set)  # get the shortest period for use in calculating plotting
-#browser()
+
 if (Period$Set[1]>0){
   LCM<-max(Period$Set)
   if (Components>1){ 
@@ -139,9 +139,11 @@ if (Period$Set[1]>0){
   } else {LCM<-24}      #  default to 24 if spectrum given
 print(LCM)
 
-#  if not yet set, set defaults;  This should be added as an undocumented parameter to override which Graphs print by default
-# if lss1 ..  else if non-progressive2 ... else if gliding spectrum progressive3 ... else if 1-comp progressive4 or multi-comp progressive5
-#  raw data, model, MESOR, Amplitude, Phase, N (# pts), heatmap
+  #####################################################################################################
+  #  if not yet set, set defaults;  This should be added as an undocumented parameter to override which Graphs print by default
+  # if lss1 ..  else if non-progressive2 ... else if gliding spectrum progressive3 ... else if 1-comp progressive4 or multi-comp progressive5
+  #  raw data, model, MESOR, Amplitude, Phase, N (# pts), heatmap
+  #####################################################################################################
 
 if (!exists("GraphSet")){    
     if (Progressive$Interval==0 || Progressive$Increment==0){    #  default settings for non-progressives (2)
@@ -161,26 +163,22 @@ if (!exists("GraphSet")){
   Interval<-Progressive$Interval
   Increment<-Progressive$Increment
   FreqInc<-Period$Increment
-  #Period$Start<-Period$Start
-  #Period$End<-Period$End
   oneCycle<-sort(Period$Set,decreasing=TRUE)     # can be a vector of one or more
   Ys_end<-length(Y)
 
   paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartDate=",format(StartDate,nsmall=3),", EndDate=",format(EndDate,nsmall=3),"\nPercent of missing (blank) sample values: unknown","\n",functionName,"\n")
 
   CosMatrixDim<-Components*2+1         #  validate and error if too large -- should it be Components*2?  no Feb 26
-  #if (oneCycle[1]>0){
+  #if (oneCycle[1]>0){   # same rules apply when Period$Set=0 (but cannot do a multipl-component LSS)
     if (Components>1 && length(oneCycle)!=Components){
       errMsg<-paste("Error:  When parameter Components is >1, Period$Set must have a corresponding number of components.  \nComponents=",Components,"; Period$Set=",Period$Set)
-      #closeOutput(file=paste("ERR",fileName),output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
       stop(errMsg)
        # Period$Set will contain multiple possible components to check separately, or as a multi-component cosinor, depending on param Components
        # if Components=1, Period$Set can have any number of components.  If Components>1, length(oneCyce) must equal Components
-    }else if (Components==1 && length(oneCycle)!=Components){
-      errMsg<-paste("Error:  If Components equals 1, Period$Set must also be only one component.  \nComponents=",Components,"; Period$Set=",Period$Set)
-      #closeOutput(file=paste("ERR",fileName),output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
-      stop(errMsg)
-    }
+    }    #else if (Components==1 && length(oneCycle)!=Components){
+             #errMsg<-paste("Error:  If Components equals 1, Period$Set must also be only one component.  \nComponents=",Components,"; Period$Set=",Period$Set)
+              #stop(errMsg)
+             #}
   #} 
   errMsg<-""            #   this error message gets printed at the beginning of the rtf output file
   #  symbols currently in use for Err values, printed in the matrix
@@ -205,9 +203,11 @@ if (!exists("GraphSet")){
   } else {
     m=regexec("[^\\]*$",fileName)
   }
+
   fileName1<-regmatches(fileName,m) 
   fileLen<-nchar(fileName1)
   fileName6<-substring(fileName1,1,fileLen-4)
+
   # send output to file  -- build name of file with path to data f
   BaseTime<-Sys.time()        
   thisTime <- format(BaseTime, "--%d%b%y--%H-%M-%OS")
@@ -232,9 +232,10 @@ if (!exists("GraphSet")){
                           tiff(filename=fileName4,width=8, height=10)
                         }
                 }
-                }
+            }
       }
   }
+
 #####################################################################################################
 #                                                                                                   #
 #        Read data file;  assume tab delimited;  if that fails, read as CSV;  get header;           #
@@ -242,6 +243,7 @@ if (!exists("GraphSet")){
 #                                                                                                   #
 #####################################################################################################
 
+  missingDataCol<-vector(mode="character")
   MyDataDelimiter <- read.table(fileName, nrows=6, header=header, sep="\t",stringsAsFactors=FALSE,skip=Skip)          
   #  only read a few rows to determine if CSV or tab delimited
   colCount<-length(MyDataDelimiter[5,])     #  accurate for tab delimited
@@ -278,7 +280,7 @@ if (!exists("GraphSet")){
     weirdHour<-as.integer(substr(MyDataReada[,1],9,10))    # get hour as integer  (all)
     weirdHourIdx<-which(weirdHour>23)                    # which hours are weird?  Index into character column
     weirdHourInt<-as.integer(substr(MyDataReada[weirdHourIdx,1],9,10))  #  get weird hours integer values
-    #if (weirdHour>24){
+
       Hour<-strsplit(MyDataReada[weirdHourIdx,1],substr(MyDataReada[weirdHourIdx,1],9,10),fixed=TRUE)     #  get only bad hours 
     zz<-1
     View(weirdHourIdx)
@@ -290,185 +292,170 @@ if (!exists("GraphSet")){
       saveRead<-MyDataReada[z,1]
       if (Hour[[zz]][2]==""){Hour[[zz]][2]<-weirdHourInt[zz]}     #  "" if hour=minute, replace "" with same as weird
       MyDataReada[z,1]<-paste(Hour[[zz]][1],zeroPad,weirdHourInt[zz]-24,Hour[[zz]][2],sep="")
-      #weirdDay<-as.integer(substr(MyDataReada[z,1],5,8))                 #   GET yr/ day
-      #Day<-strsplit(MyDataReada[z,1],substr(MyDataReada[z,1],5,8),fixed=TRUE)     #  get hours and fix
       Day<-strptime(MyDataReada[z,1],"%Y%m%d%H%M",tz=tz)
 
       MyDataReada[z,1]<-format(Day+(24*3600),"%Y%m%d%H%M")
-      #MyDataReada[z,1]<-paste(Day[[1]][1],weirdDay+1,Day[[1]][2],sep="")
-      cat(saveRead,"zz",zz,"weirdHourInt[zz]",weirdHourInt[zz],"--","z",z,MyDataReada[z,1],"\n")
+      if (Debug){
+        cat(saveRead,"zz",zz,"weirdHourInt[zz]",weirdHourInt[zz],"--","z",z,MyDataReada[z,1],"\n")
+      }
       zz<-zz+1
-    #}
     }
   }
-  # if (is.character(MyDataRead[,-TimeCol[1]])){    # are any columns character, excluding date col??
-  #   str(MyDataRead)
-  #   message<-paste("ERROR:  Data is being read as character data.  This will cause all data to be read as character.")
-  #   errMsg<-paste(errMsg,message)
-  #   closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
-  #   stop(message) 
-  # }
-  if (IDcol=="fileName"){    #set once here
+
+  if (IDcol=="fileName"){    #set once here as fileName if parameter indicates to use the file
     SubjectID<-fileName6
   } else {
-    SubjectID<-MyDataReada[1,IDcol]     #  set for each Loop, within i Loop
+    SubjectID<-MyDataReada[1,IDcol]     #  set for each Loop, within i Loop, assumes this is a subject ID
   }
-  keepers<-c()
-  for (y in c(TimeCol,Y)){
-    #MyDataRead<-subset(MyDataReada, all(!is.na(MyDataReada[,c(TimeCol,Y)])) )     # omit data row if any Time or Y column is NA
-    #  MyDataRead<-na.omit(MyDataReada[,c(TimeCol,Y)])   changes column numbers, so problematic
-    is.na(MyDataReada[,y])<-which(MyDataReada[,y]=="")    #   replace spaces with NA
-    if (all(is.na(MyDataReada[,y]))){
-      message<-paste("ERROR:  You have selected a column that has no data in it:  column",y)
-      errMsg<-paste(errMsg,message)
-      closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
-      stop(message) 
-      
-    }
-    keepersY<-na.omit(MyDataReada[,y])            #  eliminate NA
-    keepers<-union(na.action(keepersY),keepers)     #  Add NA rows to previous NA rows
-    #   use inverse of omitted NA indexes to get good values
-  }
-  if (length(keepers)>0){
-    MyDataRead<-MyDataReada[-keepers,]
-    message<-"Note:  Missing data was found.  All Y columns values in that row were omitted."
-    print(message)
-    errMsg=paste(errMsg,message)
-  } else {
-    MyDataRead<-MyDataReada
-  }
-  missingData<-(length(MyDataReada[,TimeCol])-length(MyDataRead[,TimeCol]))/length(MyDataReada[,TimeCol])    #  rowsData<-length(MyDataReada[,1])
-
-  #MyDataRead<-subset(MyDataReada, !is.na(MyDataReada[,Y]))       # omit data row if Y column is NA
-  #MyDataRead = na.omit(head(MyDataRead1,n=-2))   #  will drop the very last row in case it had no data
-#####################################################################################################
-#                                                                                                   #
-#        Time column: convert time format to numeric if needed, or to number of Units of time       #
-#                May be in one or two columns;  2 columns must be appended before conversion        #
-#                                                                                                   #
-#####################################################################################################
-
+  #browser()
+  #####################################################################################################
+  #                                                                                                   #
+  #        Time column: convert time format to numeric if needed, or to number of Units of time       #
+  #                May be in one or two columns;  2 columns must be appended before conversion        #
+  #                                                                                                   #
+  #####################################################################################################
+  
   timeFormatOrig <- timeFormat
+  TimeColLen<-length(TimeCol)
   if (timeFormat=="numeric"){
     BaseDate<-format(Sys.Date(), "%Y%m%d%H%M")   # as.POSIXct(strptime(Sys.Date(), "%Y%m%d%H%M",tz=tz))     # midnight of first day of data
-    #BaseDate2 <- paste(substr(BaseDate,1,8),"0000",sep="")
     # apply timezone hack to get correct time
     origin <- as.POSIXct('1970-01-01 00:00:00',tz=tz) 
     offset <- as.numeric(origin)
-    #browser()
-    newOrder<-MyDataRead[order(MyDataRead[,TimeCol], na.last = TRUE, decreasing = FALSE),]
-    MyDataRead<-newOrder
-    #browser()
-    MyDataRead[,TimeCol]<-format(as.POSIXct(as.numeric(as.POSIXct(strptime(BaseDate, "%Y%m%d%H%M",tz=tz)))+(as.numeric(MyDataRead[,TimeCol])*3600),origin=origin,tz),"%Y%m%d%H%M")
+    newOrder<-MyDataReada[order(MyDataReada[,TimeCol], na.last = TRUE, decreasing = FALSE),]
+    MyDataReada<-newOrder
+    MyDataReada[,TimeCol]<-format(as.POSIXct(as.numeric(as.POSIXct(strptime(BaseDate, "%Y%m%d%H%M",tz=tz)))+(as.numeric(MyDataReada[,TimeCol])*3600),origin=origin,tz),"%Y%m%d%H%M")
     timeFormat<-"%Y%m%d%H%M"
     timeFormatOrig<-"numeric"
     
-    } else {   #convert time from 2 columns  (only one format allowed if time is in 2 columns:   17/10/07 \t 19:00:20)
-    if (grepl(".",MyDataRead[1,TimeCol[1]],fixed=TRUE)){    # timeFormat not == 'numeric' but time is numeric
-      str(MyDataRead)
-      #browser()
+  } else {   #convert time from 2 columns  (only one format allowed if time is in 2 columns:   17/10/07 \t 19:00:20)
+    if (grepl(".",MyDataReada[1,TimeCol[1]],fixed=TRUE)){    # timeFormat not == 'numeric' but time is numeric
+      str(MyDataReada)
       message<-paste("ERROR:  The time format does not match timeFormat setting.  Time is in a numeric/decimal format, but timeFormat is not set to 'numeric'.")
       errMsg<-paste(errMsg,message)
       closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
       stop(message) 
     }
+
     if (length(TimeCol)==2){
-      MyDataRead[,TimeCol[1]] <- as.POSIXct(strptime(x=paste(MyDataRead[,TimeCol[1]],MyDataRead[,TimeCol[2]]), format=timeFormat, tz=tz))      #  "%d/%m/%y %H:%M:%S"
-      MyDataRead[,TimeCol[2]] <- format(MyDataRead[,TimeCol[1]],"%Y%m%d%H%M")
-      names(MyDataRead)[TimeCol[2]] <- "Datetime"
+      MyDataReada[,TimeCol[1]] <- as.POSIXct(strptime(x=paste(MyDataReada[,TimeCol[1]],MyDataReada[,TimeCol[2]]), format=timeFormat, tz=tz))      #  "%d/%m/%y %H:%M:%S"
+
+      MyDataReada[,TimeCol[2]] <- format(MyDataReada[,TimeCol[1]],"%Y%m%d%H%M")
+      names(MyDataReada)[TimeCol[2]] <- "Datetime"
       TimeCol<-TimeCol[2]
     } else {   #convert time from 1 columns
       if (length(TimeCol)==1){
-        MyDataRead[,TimeCol[1]] <- as.POSIXct(strptime(x=MyDataRead[,TimeCol[1]], format=timeFormat, tz=tz))
-        MyDataRead[,TimeCol[1]] <- format(MyDataRead[,TimeCol[1]],"%Y%m%d%H%M")
-        names(MyDataRead)[TimeCol[1]] <- "Datetime"
+        MyDataReada[,TimeCol[1]] <- as.POSIXct(strptime(x=MyDataReada[,TimeCol[1]], format=timeFormat, tz=tz))
+        MyDataReada[,TimeCol[1]] <- format(MyDataReada[,TimeCol[1]],"%Y%m%d%H%M")
+        names(MyDataReada)[TimeCol[1]] <- "Datetime"
       }}}
-#####################################################################################################
-#                                                                                                   #
-#        RangeDateTime$Start and $End: calculate total time length, StartDate and EndDate           #
-#                May be in one or two columns;  2 columns must be appended before conversion        #
-#                    NA- use the 1st time in the data set                                           #
-#                    0- use Midnight at the start/end of the data                                   #
-#                Calculate start and ending indexes in the data                                     #
-#                print actual hours to be used for analysis, and 1st and last data point in file    #
-#                                                                                                   #
-##################################################################################################### 
-#browser()
-  str(MyDataRead)                                         #  removed +3600 from *tz=tz))+3600)*       6/14
-  AnalyzeLength<-(as.POSIXct(strptime(tail(MyDataRead[,TimeCol],1), "%Y%m%d%H%M",tz=tz))) - as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y%m%d%H%M",tz=tz)) 
-  MyData_HRs<-(AnalyzeLength)*24  # hours in length of actual data
-  if (is.na(StartDate)){
-    StartDate <- format(as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y%m%d%H%M",tz=tz)),"%Y%m%d%H%M")
-  } else {if (StartDate == 0){
-    StartDate <-paste(substr(MyDataRead[1,TimeCol],1,8),"0000",sep="")                #  Use StartTime as start of analysis date-time
-  } else StartDate<-format(as.POSIXct(strptime(StartDate, timeFormat,tz=tz)),"%Y%m%d%H%M")     #  needed for when StartDate is specified in a different format--test!!
-  } #as.POSIXct(strptime(MyData[1,TimeCol], "%Y%m%d",tz=tz))
-  #MyData_length<-length(MyDataRead[,1])
-  StartIndex<-which(MyDataRead[,TimeCol]>=StartDate)   #  where is the desired startTime?  (if start point is later than first data point)
-  MyData_length<-length(StartIndex)  
-
-  if (is.na(EndDate)){                                                     #  removed tz=tz))+3600      6/14
-    EndDate <- format(as.POSIXct(strptime(tail(MyDataRead[StartIndex,TimeCol],1), "%Y%m%d%H%M",tz=tz)),"%Y%m%d%H%M") # should these be pasted or posix?  todo
-    } else {if (EndDate == 0){
-    #EndDate <-paste(substr(as.numeric(MyDataRead[MyData_length,TimeCol])+as.numeric(10000),1,8),"0000",sep="")                #  Use StartTime as start of analysis date-time
-      EndDate<-paste(substr(format(as.POSIXct(strptime(MyDataRead[MyData_length,TimeCol], "%Y%m%d%H%M",tz=tz))+86400,"%Y%m%d%H%M") ,1,8),"0000",sep="")
-    } else EndDate<-format(as.POSIXct(strptime(EndDate, timeFormat,tz=tz)),"%Y%m%d%H%M")     #  needed for when EndDate is specified in a different format--test!!
+  if (is.na(MyDataReada[2,TimeCol[1]])){
+    str(MyDataReada)
+    message<-paste("ERROR:  The time format does not match timeFormat parameter setting, or is NA.  The timeFormat parameter may need to be corrected.")
+    errMsg<-paste(errMsg,message)
+    closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
+    stop(message) 
   }
+  
+  ########################moved#####################################################################
+  #                                                                                                   #
+  #        RangeDateTime$Start and $End: calculate total time length, StartDate and EndDate           #
+  #                May be in one or two columns;  2 columns must be appended before conversion        #
+  #                    NA- use the 1st time in the data set                                           #
+  #                    0- use Midnight at the start/end of the data                                   #
+  #        StartIndex & EndIndex:   Calculate start and ending indexes in the data                    #
+  #           (EndIndex is recalculated in each Y loop after removing any rows with missing data)     #
+  #                print actual hours to be used for analysis, and 1st and last data point in file    #
+  #        MyData_HRs:  difference in time from 1st data point to last data point -- of ALL data      #
+  #        MyData_length:  How much data comes ***after*** StartIndex date and time                   #
+  #           (MyData_length is recalculated after removing missing data in TimeCol and Y)            #
+  #        Using Start/EndIndex, pull desired data into MyDataRead (from MyDataReada)                 #
+  #                                                                                                   #
+  ##################################################################################################### 
 
-  EndIndex<-which(MyDataRead[,TimeCol]<=EndDate)   #  where is the desired endTime? 
-  #cat("Check that your data file and End Date date are correct.  Data file begins:",MyDataRead[1,TimeCol],"; End Date is: ",EndDate,"\n")
+  str(MyDataReada)                                         #  removed +3600 from *tz=tz))+3600)*       6/14
+  AnalyzeLength<-difftime(as.POSIXct(strptime(tail(MyDataReada[,TimeCol],1), "%Y%m%d%H%M",tz=tz)), as.POSIXct(strptime(MyDataReada[1,TimeCol], "%Y%m%d%H%M",tz=tz)),tz, units = c("hours")) 
+  MyData_HRs<-(AnalyzeLength)             #  *24  # hours in length of actual data
+  if (is.na(StartDate)){
+    StartDate <- format(as.POSIXct(strptime(MyDataReada[1,TimeCol], "%Y%m%d%H%M",tz=tz)),"%Y%m%d%H%M")
+  } else {if (StartDate == 0){
+    StartDate <-paste(substr(MyDataReada[1,TimeCol],1,8),"0000",sep="")                #  Use StartTime as start of analysis date-time
+  } else StartDate<-format(as.POSIXct(strptime(StartDate, timeFormat,tz=tz)),"%Y%m%d%H%M")     #  needed for when StartDate is specified in a different format--test!!
+  }  
+  StartIndex<-which(MyDataReada[,TimeCol]>=StartDate)   #  where is the desired startTime?  (if start point is later than first data point)
+  MyData_length<-length(StartIndex)  
+  
+  if (is.na(EndDate)){                                                     #  removed tz=tz))+3600      6/14
+    EndDate <- format(as.POSIXct(strptime(tail(MyDataReada[StartIndex,TimeCol],1), "%Y%m%d%H%M",tz=tz)),"%Y%m%d%H%M") # should these be pasted or posix?  todo
+  } else {if (EndDate == 0){
+    if (substr(MyDataReada[MyData_length,TimeCol],9,12)=="0000"){
+      EndDate = paste(substr(format(as.POSIXct(strptime(MyDataReada[MyData_length,TimeCol], "%Y%m%d%H%M",tz=tz)),"%Y%m%d%H%M") ,1,8),"0000",sep="") 
+    }
+    else {
+      EndDate<-paste(substr(format(as.POSIXct(strptime(MyDataReada[MyData_length,TimeCol], "%Y%m%d%H%M",tz=tz))+86400,"%Y%m%d%H%M") ,1,8),"0000",sep="")     #tz=tz))+86400  case:  25 hrs of data Khantyd
+    #   changed back 10/10/17  --  this was adding 24 hrs to enddate -- not sure why 9/29/17 
+    }
+  } else EndDate<-format(as.POSIXct(strptime(EndDate, timeFormat,tz=tz)),"%Y%m%d%H%M")     #  needed for when EndDate is specified in a different format--test!!
+  }  # end else
 
-  MyData<-MyDataRead[StartIndex[1]:tail(EndIndex,n=1),]     #  grab all the data from array after StartTime, before EndTime
+  if (!all(MyDataReada[,TimeCol]>EndDate)){     #  If all data is for one day, the dates could all be greater than EndDate
+    EndIndex<-which(MyDataReada[,TimeCol]<=EndDate)   #  where is the desired endTime? 
+  } else
+    EndIndex
+  
+  #yloop MyData <- array(data=NA,c(EndIndex-StartIndex, 2))   #  grab time and Y  NO I THINK THIS IS DONE AT LINE 385, 391
+  MyDataRead<-MyDataReada[StartIndex[1]:tail(EndIndex,n=1),]     #  grab all the data from array after StartTime, before EndTime
 
-  cat("There are ",MyData_HRs," actual hours of data in this file, ",MyDataRead[1,TimeCol]," to ",MyDataRead[tail(EndIndex,n=1),TimeCol],", and ",MyData_length,"data points.\n  %",missingData*100,"of data points are missing.\n")       #  Analysis will proceed from",StartDate," to ",EndDate,"\n")
-
-  print(MyDataRead[1,])
-  print(tail(MyDataRead,1))
-#####################################################################################################
-#                                                                                                   #
-#        RefDateTime: get correct reference time;  subtract from data, start tim, and end time      #
-#                convert time to a count in Units, as set by Units parameter                        #
-#                    calculate MyData$time.n, MyData$time.hour and  MyData_length (used in analysis)#                                          #
-#                    print total hours used in analysis and start/end times                         #
-#                                                                                                   #
-##################################################################################################### 
-
+  print(MyDataReada[1,])
+  print(tail(MyDataReada,1))
+  #browser()
+  #####################################################################################################
+  #                                                                                                   #
+  #        RefDateTime: get correct reference time;  subtract from data, start tim, and end time      #
+  #                convert time to a count in Units, as set by Units parameter                        #
+  #                                                                                                   #
+  ##################################################################################################### 
+  
   # convert time
-  MyData$time=as.POSIXct(strptime(MyData[,TimeCol], "%Y%m%d%H%M", tz=tz))     #   tz="GMT"
+  MyDataRead$time=as.POSIXct(strptime(MyDataRead[,TimeCol], "%Y%m%d%H%M", tz=tz))     #   tz="GMT"
   # convert time to a number (time in seconds, converted into hours)
   # should probably be done with a hard coded time zone, so CDT and DST don't cause problems
-
+  
   if (is.na(RefDateTime)){
-    RefTime <-as.POSIXct(strptime(MyData[1,TimeCol], "%Y%m%d%H%M",tz=tz))                #  11/16 chg from timeFormat to "%Y%m%d%H%M": when RefDatTime=NA  Use StartTime as reference date-time
-    RefTimeString <- MyData[1,TimeCol]
+    RefTime <-as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y%m%d%H%M",tz=tz))                #  11/16 chg from timeFormat to "%Y%m%d%H%M": when RefDatTime=NA  Use StartTime as reference date-time
+    RefTimeString <- MyDataRead[1,TimeCol]
   } else if (RefDateTime==0){
-    if (timeFormatOrig=="numeric"){
-      RefTime<-as.POSIXct(strptime(MyData[1,TimeCol], "%Y%m%d",tz=tz))     # midnight of first day of data   why would it be "%Y-%m-%d"??  changed
-      RefTimeString <- paste(substr(MyData[1,TimeCol],1,10),"0000",sep="")
-    } else {
-      RefTime<-as.POSIXct(strptime(MyData[1,TimeCol], "%Y%m%d",tz=tz))     # midnight of first day of data
-      RefTimeString <- paste(substr(MyData[1,TimeCol],1,8),"0000",sep="")
+      if (timeFormatOrig=="numeric"){
+        RefTime<-as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y%m%d",tz=tz))     # midnight of first day of data   why would it be "%Y-%m-%d"??  changed
+        RefTimeString <- paste(substr(MyDataRead[1,TimeCol],1,10),"0000",sep="")
+      } else {
+        RefTime<-as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y%m%d",tz=tz))     # midnight of first day of data
+        RefTimeString <- paste(substr(MyDataRead[1,TimeCol],1,8),"0000",sep="")
       }
-     } else if (RefDateTime<=24 && timeFormatOrig=="numeric"){
-         #RefTime<-as.POSIXct(strptime(MyData[1,TimeCol], "%Y%m%d",tz=tz))     # midnight of first day of data   why would it be "%Y-%m-%d"??  changed
-         # RefDateTimePart<-round(RefDateTime * 3600, units="min")
-         # RefTime <- as.POSIXct(strptime(x=paste(MyData[1,TimeCol],RefDateTimePart), format=timeFormat, tz=tz))      #  "%d/%m/%y %H:%M:%S"
-         # RefTime <- format(RefTime,"%Y%m%d%H%M")
-         # 
-         # BaseDate<-format(Sys.Date(), "%Y%m%d%H%M")         # midnight of first day of data
-         # # apply timezone hack to get correct time
-         # origin <- as.POSIXct('1970-01-01 00:00:00',tz=tz) 
-         # offset <- as.numeric(origin)
-         RefTime<-as.POSIXct(as.numeric(as.POSIXct(strptime(BaseDate, "%Y%m%d%H%M",tz=tz)))+(as.numeric(RefDateTime)*3600),origin=origin,tz)
-         RefTimeString <- format(RefTime,"%Y%m%d%H%M")    #  ,"%Y%m%d%H%M")
-         
-         
-         
-       } else {  #  RefDateTime is a specific date and time
-            RefTime<-as.POSIXct(strptime(RefDateTime, timeFormat,tz=tz))
-             RefTimeString <- RefDateTime
-             }
-
+    } else if (RefDateTime<=24 && timeFormatOrig=="numeric"){
+    
+        RefTime<-as.POSIXct(as.numeric(as.POSIXct(strptime(BaseDate, "%Y%m%d%H%M",tz=tz)))+(as.numeric(RefDateTime)*3600),origin=origin,tz)
+        RefTimeString <- format(RefTime,"%Y%m%d%H%M")    #  ,"%Y%m%d%H%M")
+        
+      } else {  #  RefDateTime is a specific date and time
+          RefTime<-as.POSIXct(strptime(RefDateTime, timeFormat,tz=tz))
+          RefTimeString <- RefDateTime
+        }
+  #browser()
+  #####################################################################################################
+  #                                                                                                   #
+  #        Start/EndTime: using RangeStart and RangeEnd, the data to be used in the analysis is       #
+  #                identified.  It may be a date within the data file, or outside of the data         #
+  #                file.  *Then the reference time is subtracted so that all time is relative to      #
+  #                units (hours) from the user-given reference time.  *Time is converted from         #
+  #                seconds to units (hours).  *If these dates are not valid appropriate errors are    #
+  #                printed to the console. *Calculates average time between data points (dt).         # 
+  #        variables:  MyDataRead$time.n, MyDataRead$time.hour and  MyData_length (used in analysis)  #                                          #
+  #                    print total hours used in analysis and start/end times                         #
+  #        MyData_hours:  based on these, the total hours to be analyzed is calculated.               #
+  #                                                                                                   #
+  #####################################################################################################
+  
   StartTime<-(as.numeric(as.POSIXct(strptime(StartDate, "%Y%m%d%H%M",tz=tz)))-as.numeric(RefTime))/3600      # convert to hours
   if (is.na(StartTime) ){
     message<-paste("ERROR:  StartTime or StartDate or Date format is invalid: StartTime",StartTime," StartDate: ",StartDate," RefTime:",RefTime)
@@ -477,82 +464,98 @@ if (!exists("GraphSet")){
     stop(message) 
   } 
   EndTime<-(as.numeric(as.POSIXct(strptime(EndDate, "%Y%m%d%H%M",tz=tz)))-as.numeric(RefTime))/3600   # convert to hours
- 
+  
   if (is.na(EndTime) ){
     message<-paste("ERROR:  EndDate or Date format is invalid: ",EndTime)
     errMsg<-paste(errMsg,message)
     closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
     stop(message) 
   } 
-
-  MyData$time.n=as.numeric(MyData$time) - as.numeric(RefTime)
-  MyData$time.hour<-MyData$time.n/3600
-  MyData_length<-length(MyData[,1])
+  
+  MyDataRead$time.n=as.numeric(MyDataRead$time) - as.numeric(RefTime)
+  MyDataRead$time.hour<-MyDataRead$time.n/3600
+  MyData_length<-length(MyDataRead[,1])
   drawPgram<-FALSE
   if (dt==0){
     drawPgram<-TRUE
-    sumTab<-diff(MyData$time.hour)          #  acts only on integer values, use .n
+    sumTab<-diff(MyDataRead$time.hour)          #  acts only on integer values, use .n
     #  dt<-sumTab[median(which(sumTab == max(sumTab, na.rm=TRUE)))]
     dt<-median(sumTab, na.rm=TRUE)
   }
-#   if (timeFormatOrig=="numeric"){
-#     EndTime<-max(MyData[StartIndex[1]:tail(EndIndex,n=1),TimeCol])
-#     StartTime<-min(MyData[StartIndex[1]:tail(EndIndex,n=1),TimeCol])
-#   } 
-  MyData_hours<-as.numeric(EndTime-StartTime) + dt         #   get number of hours to analyze
 
+  if (EndDate==tail(MyDataRead[,TimeCol],1) && StartDate==MyDataRead[1,TimeCol]){   # only add dt if using actual data points
+    MyData_hours<-as.numeric(EndTime-StartTime) + dt         #   get number of hours to analyze
+  }else{
+      MyData_hours<-as.numeric(EndTime-StartTime)
+  }
   cat("The program is using ",MyData_hours," hours for the analysis, starting at hour",StartTime,"and ending at hour",EndTime," relative to RefTime:",RefTimeString,"\n")
-  # calculate number of hours in the Interval and Increment (Units*Interval, Units*Increment)
-  # this is used for inner loop, progressive analysis of intervals over the full data set
+  #browser()
+  #####################################################################################################
+  #                                                                                                   #
+  #        Interval, Increment, FreqInc, Period$Start, Period$End:                                    #
+  #                Variables used by progressive, and StartSpans vector, are                          #
+  #                calculated.  [This section is used to convert time to requested Units, but is not  #
+  #                functional.]  *  If these variables are not making sense together errors are       #
+  #                reported.  *A string is built that holds all the parameterized values and is       #
+  #                printed in the RTF files.                                                          #
+  #                                                                                                   #
+  #####################################################################################################
+
   if (Interval==0 || Increment==0){     #  || oneCycle[1]>0){     #  No progression -- analyze full dataset
     Interval <-MyData_hours
     Increment<-MyData_hours
   } else if (Units=='hours'){
-        Interval<-Interval
-        Increment<-Increment
-      } else if (Units=='days'){
-            Interval<-Interval*24
-            Increment<-Increment*24
-          } else if (Units=='years'){
-                  Interval<-Interval*24*365
-                  Increment<-Increment*24*365
-                } else if (Units=='weeks'){
-                        Interval<-24*7*Interval      
-                        Increment<-24*7*Increment
-                      } else {
-                        message<-paste("ERROR:  Units is improperly given: ",Units," Valid values:  hours, days, weeks, years")
-                        errMsg<-paste(errMsg,message)
-                        closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
-                        stop(message) 
-                      }
+    Interval<-Interval
+    Increment<-Increment
+  } else if (Units=='days'){
+    Interval<-Interval*24
+    Increment<-Increment*24
+  } else if (Units=='years'){
+    Interval<-Interval*24*365
+    Increment<-Increment*24*365
+  } else if (Units=='weeks'){
+    Interval<-24*7*Interval      
+    Increment<-24*7*Increment
+  } else {
+    message<-paste("ERROR:  Units is improperly given: ",Units," Valid values:  hours, days, weeks, years")
+    errMsg<-paste(errMsg,message)
+    closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
+    stop(message) 
+  }
+
   if (Period$Start==0){       
     Period$Start <-Interval
   } else if (Period$Start<0){
-            message<-"ERROR:  The parameter Period$Start cannot be negative.\n"
-            errMsg<-paste(errMsg,message)
-            closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
-            stop(message)
-          } else if (Period$Start>(1.25*MyData_hours)){        #  validation of Period$Start   
-            message<-paste("ERROR:  The parameter Period$Start",Period$Start, "is much longer than the observation period",MyData_hours,".  Unreliable results.\n")
-            errMsg<-paste(errMsg,message)
-            print(message)
-          } else if (Period$Start>MyData_hours){        #  validation of Period$Start   
-            message<-paste("Warning:  The parameter Period$Start",Period$Start, "is slightly longer than the observation period",MyData_hours,".  Results may be unreliable.\n")
-            errMsg<-paste(errMsg,message)
-            print(message)
-            } # end else Period$Start==0
+    message<-"ERROR:  The parameter Period$Start cannot be negative.\n"
+    errMsg<-paste(errMsg,message)
+    closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
+    stop(message)
+  } else if (Period$Start>(1.25*MyData_hours)){        #  validation of Period$Start   
+    message<-paste("ERROR:  The parameter Period$Start",Period$Start, "is much longer than the observation period",MyData_hours,".  Unreliable results.\n")
+    errMsg<-paste(errMsg,message)
+    print(message)
+  } else if (Period$Start>MyData_hours){        #  validation of Period$Start   
+    message<-paste("Warning:  The parameter Period$Start",Period$Start, "is slightly longer than the observation period",MyData_hours,".  Results may be unreliable.\n")
+    errMsg<-paste(errMsg,message)
+    print(message)
+  } # end else Period$Start==0
+  
+  paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\n Data hrs=",format(MyData_hours,nsmall=3),"  dt=",format(dt,nsmall=3)," hours\n",functionName,"\n")
   if (FreqInc==0){
     FreqInc<-1
-    paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\nPercent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n")
   } else if (FreqInc<0){
-      message<-"ERROR:  The parameter Period$Increment cannot be negative.\n"
-      errMsg<-paste(errMsg,message)
-      closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
-      stop(message)
-    } 
-#browser()
+    message<-"ERROR:  The parameter Period$Increment cannot be negative.\n"
+    errMsg<-paste(errMsg,message)
+    closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
+    stop(message)
+  } else if (FreqInc<1){
+    message<-"Warning:  Using a fractional increment (Freq$Inc<>1) may result in reported maximal amplitudes that are not from separate maxima -- they may be points on the shoulder of the maximal peak.\n"
+    errMsg<-paste(errMsg,message)
+    print(message)
+  } 
+  
   if (Period$End==0){
-    if (dt==0){
+    if (dt==0){                      #  dt is previously calculated so this should never occurr (error?)
       Period$End<-4
     } else if (Period$End<0){
       message<-"ERROR:  The parameter Period$End cannot be negative.\n"
@@ -563,16 +566,16 @@ if (!exists("GraphSet")){
       message<-"ERROR:  The parameter Period$End is larger than the number of hours.  ???\n"
       errMsg<-paste(errMsg,message)
       print(message)
-    } else Period$End<-3*dt
+    } else Period$End<-4*dt
     if (Period$End>Period$Start){
       Period$End<-Period$Start/4
       FreqInc<-.1
     }
   }    #    end Period$End==0
-  cat(Period$Start," Period$Start ",Period$End," Period$End ",Period$Start,"Period$Start",Interval,"Interval",Increment,"Increment\n")
-
-paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\nPercent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n")
-
+  cat(StartTime," StartTime ",Period$End," Period$End ",Period$Start,"Period$Start",Interval,"Interval",Increment,"Increment\n")
+  
+  #This is built at line 546 ---  paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\n Data hrs=",format(MyData_hours,nsmall=3),"  dt=",format(dt,nsmall=3)," hours\n Percent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n")
+  
   par(mar=c(4,4,1,1)) # set up margins
   
   #  #####    note on indexes and variables:  one set tracks through the ACTUAL times and data points:  #####
@@ -581,34 +584,58 @@ paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y, ",  header=",header,"\n --  Pe
   #                MyData_hours; StartSpans, Interval, Increment, Progression_end, StartTime, StartSpanTime, EndTime
   #  #####    These two must, of course, align. See:   TimeIdx<-which(StartSpanTime <= MyData$time.hour) 
   EndIdx<-0
+  
+  if (Interval > MyData_hours){    #  warn if interval chosen is longer than data
+    message<-paste("Warning: Chosen Progressive$Interval (",Interval,") is longer than data file (",MyData_hours,") (MyData_hours).\n")
+    print(message)
+    errMsg<-paste(errMsg,message)
+  } 
+  if (Increment> MyData_hours) {
+    message<-paste("Warning:  Chosen Progressive$Increment (",Increment,") is longer than data file (",MyData_hours,") (MyData_hours).\n")
+    print(message)
+    errMsg=paste(errMsg,message)
+  }
+  
+  #####################################################################################################
+  #                                                                                                   #
+  #        StartSpans: This master, controlling vector is setup here.  It depends on the length of    #
+  #               the Interval (hours of data being analyzed = MyData_hours) and the Increment        #
+  #                selected, if any.  If this is not a progressive, there is only one element in      #
+  #        Progression_end:  The is a count of the number of elements in StartSpans and is used to    #                                                     #
+  #                determine the number of loops                                                      #
+  #                                                                                                   #
+  #####################################################################################################
 
-if (Interval > MyData_hours){    #  warn if interval chosen is longer than data
-  message<-paste("Warning: Chosen Progressive$Interval (",Interval,") is longer than data file (",MyData_hours,") (MyData_hours).\n")
-  print(message)
-  errMsg<-paste(errMsg,message)
-} 
-if (Increment> MyData_hours) {
-  message<-paste("Warning:  Chosen Progressive$Increment (",Increment,") is longer than data file (",MyData_hours,") (MyData_hours).\n")
-  print(message)
-  errMsg=paste(errMsg,message)
-}
-  # seq(72-84+1,192-50.4,by=8.4)
   if (MyData_hours==Interval){    #StartTime==MyData$time.hour[1] && 
     StartSpans<-seq(from=0,to=MyData_hours-1,by=Increment)        #StartSpans<-seq(1,Interval, by=Increment)
-  #} else {StartSpans<-seq(from=(StartTime),to=(StartTime+MyData_hours-Interval),by=Increment)  
+    
   } else {if ((MyData_hours-Interval+Increment)<=0){
-              errMsg<-paste(errMsg,"Error:  MyData_hours-Progressive$Interval+Progressive$Increment is < 1:  ",MyData_hours,"-",Interval,"+",Increment,".  Using ",MyData_hours,"as Interval.\n")
-              closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
-              Interval<-MyData_hours     # ????? is this ever run?
-              }
-      StartSpans<-seq(from=0,to=(MyData_hours-Interval+Increment),by=Increment)     #  one too many (SS), perfect for all (NA/NA)
-          #  to=(MyData_hours-1-Interval):  added + Increment because 3varsProg was doing 1 too few spans
-          #  to=(MyData_hours-1-Interval+Increment):  #best  2 too few when inc=.5 interval=24  serial section
-          #  to=(MyData_hours+1-Increment)         7 too many when inc=.5 interval=24 serial section
-          #  to=(MyData_hours-Interval+Increment)  one too many  (should be LESS THAN last span value) when inc=.5 interval=24  serial section
-          }   #StartSpans<-seq(1,Interval, by=Increment)
-
+    errMsg<-paste(errMsg,"Error:  MyData_hours-Progressive$Interval+Progressive$Increment is < 1:  ",MyData_hours,"-",Interval,"+",Increment,".  Using ",MyData_hours,"as Interval.\n")
+    closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
+    Interval<-MyData_hours     # ????? is this ever run?
+  }
+    StartSpans<-seq(from=0,to=(MyData_hours-Interval+Increment),by=Increment)     #  one too many (SS), perfect for all (NA/NA)
+    #StartSpans<-seq(1,Interval, by=Increment)
+    
+    if (tail(StartSpans,1)==round(MyData_hours)){
+      StartSpans<-StartSpans[1:length(StartSpans)-1]    #  lose the last interval.
+    }
+  }  
   Progression_end<-length(StartSpans)
+
+  #####################################################################################################
+  #                                                                                                   #
+  #        Initialize and prepare for looping.  Ys_end:  the count of the variable columns param      #
+  #                 Original_Y:  save the original Y for use in y loop                                #
+  #                 oldTimeCol:  save the original TimeCol for use in y loop                          #
+  #                                                                                                   #
+  #####################################################################################################
+  
+  Original_Y<-Y   #yloop  added
+  #Y<-2   #  yloop Only one y is processed at a time, and it will be in column 2, with time in column 1
+     #lenNonNA<-!is.NA(MyDataReada)
+     #maxNonNA<-max(apply(lenNonNA, 2, sum))+1
+  # yloop define these outside loop using 
   #  print Y title, and points Interval
   sumN <- matrix(data=NA,nrow=Ys_end,ncol=Progression_end+1)
   sumLow <- matrix(data=NA,nrow=Ys_end,ncol=Progression_end+1)
@@ -618,27 +645,132 @@ if (Increment> MyData_hours) {
   sumMode <- matrix(data=NA,nrow=Ys_end,ncol=Progression_end+1)
   sumSD <- matrix(data=NA,nrow=Ys_end,ncol=Progression_end+1)
   sumT <- matrix(data=NA,nrow=Ys_end,ncol=Progression_end+1)
-  #sumN[Progression_end+1]<-MyData_length
-  yNew<-0
+  oldTimeCol<-TimeCol  #  preserve original time column 
+  
+  #####################################################################################################
+  #                                                                                                   #
+  #        y loop: This loops through the variable columns (Y parameter) and processes each           #
+  #                 separately, in order to allow for handling missing data in each column separately #
+  #                 Original_Y:  save the original Y for use in y loop                                #
+  #                 oldTimeCol:  save the original TimeCol for use in y loop                          #
+  #                 missing:     missing data vector is cleared                                       #
+  #        output files are created at the end of each iteration. (see program end)                   #
+  #                                                                                                   #
+  #####################################################################################################
+  
+  for (y in 1:Ys_end){    #  yloop   y is for preserving results in target arrays.  variable column=2
 
-  for (y in Y){   #  parse each Y columng to get the summary component of each;  goes in final row after all j summaries
+    missing<-c()
+    yNew<-0
+    #TimeCol<-TimeColLen   ** 
+    #  1st col, if originally in col 1;  2nd col if originally 2 col   Nov 14, 17
+    #if (TimeColLen==2){
+    #  TimeCol<-oldTimeCol+1      commented out if/then 12/19/17  (already changed at 345)
+    #} else {
+      TimeCol<-oldTimeCol
+    #}
+    
+    #####################################################################################################
+    #                                                                                                   #
+    #        missing: This small loop processes the time column and one Y column for missing data       #
+    #                 prints any needed error messages                                                  #
+    #        EndIndex:  recalculates the EndIndex based on missing data (is MyData_hours recalculated?) #
+    #        MyData_length:  recalculated now that missing data is removed                              #
+    #        paramMsg, paramMsg2:  stores information about missing data for output files               #
+    #                                                                                                   #
+    #####################################################################################################
+    
+    #yloop    need to pass only time and y in col 1,2  TimeCol=1;  Y=2 by the time it gets to MyDataRead
+    for (yy in c(TimeCol,Y[y])){      #yloop keep this loop  y is current y;  yy is current column being processed for NA (time or variable)
+      #browser()
+      is.na(MyDataRead[,yy])<-which(MyDataRead[,yy]=="")    #   replace spaces with NA
+      if (all(is.na(MyDataRead[,yy]))){
+        message<-paste("ERROR:  You have selected a column that has no data in it:  column",yy)
+        errMsg<-paste(errMsg,message)
+        closeOutput(file=fileName3,output=Output,console=Console,opar=opar,ERR=TRUE,errMsg=errMsg,paramMsg=paramMsg)
+        stop(message) 
+      }
+
+      keepersY<-na.omit(MyDataRead[,yy])            #  eliminate NA and return list of good (na.actions preserved)
+      missing<-union(na.action(keepersY),missing)     #  Add NA rows to previous NA rows and track missing from Time and Y cols
+      if (length(na.action(keepersY))>0){     # count how many have an NA action associated
+        missingDataCol=append(missingDataCol,yy,length(missingDataCol))      #  
+      }
+      #   use inverse of omitted NA indexes to get the indexes for all rows with good values
+    }
+
+    #yloop     TimeCol=1;  Y=2 by the time it gets to MyDataRead
+    nCol<-dim(MyDataRead)[2]       #Number of columns  (cannot use "time" in combining columns for new matrix below)
+    
+    if (length(missing)>0){
+      MyData<-MyDataRead[-missing,c(TimeCol,Y[y], (nCol-2):nCol )]       # yloop   keep only time and current Y  and time cols      #MyDataRead[-missing,c(TimeCol,Y[y], nCol-2:nCol )]      # yloop   keep only time and current Y
+      #missingDataCol<-na.omit(missingDataCol)      #  skip any NAs in this vector
+      message<-paste("Note:  Missing data was found in column ",paste(missingDataCol,collapse=", "),".  Rows having missing data are omitted from the analysis for this column.  \n")
+      print(message)
+      errMsg=paste(errMsg,message)
+    } else {
+      MyData<-MyDataRead[,c(TimeCol,Y[y], (nCol-2):nCol )]        # yloop   c(TimeCol,Y)
+    }   #  from here on, TimeCol=1 and data is in column 2
+    missingData<-(length(MyDataRead[,TimeCol])-length(MyData[,TimeCol]))/length(MyDataRead[,TimeCol])    #  rowsData<-length(MyDataRead[,1])
+    TimeCol<-1
+    
+    #  recalculate EndIndex after removing data:  Added 11/1/2017 because missing calc was moved here
+    if (!all(MyData[,TimeCol]>EndDate)){     #  If all data is for one day, the dates could all be greater than EndDate
+      EndIndex<-which(MyData[,TimeCol]<=EndDate)   #  where is the desired endTime? 
+    } else
+      EndIndex
+    
+    oldMyData_length<-MyData_length          #  11/1/2017
+    MyData_length<-length(MyData[,TimeCol])
+    cat("There are ",MyData_HRs," actual hours of data in this file, ",MyData[1,TimeCol]," to ",MyData[tail(EndIndex,n=1),TimeCol],", and ",MyData_length,"data points.\n  %",missingData*100,"of data points are missing.\n")       #  Analysis will proceed from",StartDate," to ",EndDate,"\n")
+    #  " update with known missing data amounts"
+    paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y[y], ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\n Data hrs=",format(MyData_hours,nsmall=3),"  dt=",format(dt,nsmall=3)," hours\nPercent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n")
+    paramMsg2<-paste("There are ",MyData_HRs," actual hours of data in this file, ",MyData[1,TimeCol]," to ",MyData[tail(EndIndex,n=1),TimeCol],", and ",MyData_length,"data points.\n  %",missingData*100,"of data points are missing.\n")  #  print missing data info
+    
+  #####################################################################################################
+  #                                                                                                   #
+  #        Set variables used by the Data Summary section of the RTF and DAT file                     #
+  #               outputs are initialized.  Looping through all the data columns, summation variables #
+  #                are calculated for each column (Y).                                                #
+  #        Progression_end:  The is a count of the number of elements in StartSpans and is used to    #                                                     #
+  #                determine the number of loops                                                      #
+  #                                                                                                   #
+  #####################################################################################################
+
+    yy=2
     yNew<-yNew+1
     sumN[yNew,Progression_end+1]<-MyData_length
-    sumLow[yNew,Progression_end+1]<-min(MyData[,y], na.rm=TRUE)
-    sumHi[yNew,Progression_end+1]<-max(MyData[,y], na.rm=TRUE)
-    sumMean[yNew,Progression_end+1]<-mean(MyData[,y], na.rm=TRUE)
-    sumMedian[yNew,Progression_end+1]<-median(MyData[,y], na.rm=TRUE)   #  could be proper dt if VERY irregular data
-    sumSD[yNew,Progression_end+1]<-sqrt(var(MyData[,y],y=NULL))
-    sumTab<-tabulate(MyData[,y]*1000)          #  acts only on integer values, ensure integers;   each value is counted in it's cardinal location     
-    dTtest<-which(sumTab == max(sumTab, na.rm=TRUE))/1000   #  which data value is most often used? 
+    sumLow[yNew,Progression_end+1]<-min(MyData[,yy], na.rm=TRUE)
+    sumHi[yNew,Progression_end+1]<-max(MyData[,yy], na.rm=TRUE)
+    if (is.na(mean(MyData[,yy], na.rm=TRUE))){    #  warn if cannot calculate a mean
+      message<-paste("Warning: Non-numeric data present -- may indicate there is a header when header is set to FALSE.\n")
+      print(message)
+      errMsg<-paste(errMsg,message)
+    } 
+    sumMean[yNew,Progression_end+1]<-mean(MyData[,yy], na.rm=TRUE)
+    sumMedian[yNew,Progression_end+1]<-median(MyData[,yy], na.rm=TRUE)   #  could be proper dt if VERY irregular data
+    sumSD[yNew,Progression_end+1]<-sqrt(var(MyData[,yy],y=NULL))
+    #the next two lines are an old implementation of MODE, but large numbers with decimal places cause it to be SLOOOOOOOOW
+    #sumTab<-tabulate(MyData[,y]*1000)          #  acts only on integer values, ensure integers;   each value is counted in it's cardinal location     
+    #dTtest<-which(sumTab == max(sumTab, na.rm=TRUE))/1000   #  which data value is most often used? 
+    # The next two lines are an alternate method.  But in the case of large numbers with decimal places, there will be no maximal value....all unique values
+    #sumTab<-diff(MyData[,y])      #  so we have decided to exclude this calculation from the output     
+    #dTtest<-Mode(sumTab, na.rm=TRUE)
     sumT[yNew,Progression_end+1]<-dt
-    if (length(dTtest)>1){    # if more than 4 are the same as the max dT, average them to get Mode
-      sumMode[yNew,Progression_end+1] <- mean(dTtest, na.rm=TRUE)
-      } else {sumMode[yNew,Progression_end+1]<-dTtest   #  The one used the most is the Mode
-              }
+    # if (length(dTtest)>1){    # if more than 4 are the same as the max dT, average them to get Mode
+    #   sumMode[yNew,Progression_end+1] <- mean(dTtest, na.rm=TRUE)
+    #   } else {sumMode[yNew,Progression_end+1]<-dTtest   #  The one used the most is the Mode
+              #}
     #   sumT      hours+dt=T acknowledges that most times points are binned, so should be more than actual hours in file
-  }
+  #}
   
+  #####################################################################################################
+  #                                                                                                   #
+  #        Interval, Increment, FreqInc, Period$Start: Additional checks are done on these variables  #
+  #                and errors are reported if any issues are found.                                   #
+  #                                                                                                   #
+  #####################################################################################################
+
   Page<-0
   if (oneCycle[1]==0){                    #  if oneCycle != 0, Period$End and FreqInc are not used.
     if (Period$End <= 0 || FreqInc <= 0){
@@ -661,9 +793,21 @@ if (Increment> MyData_hours) {
     } else if (FreqInc>1) {
       message<-"Warning:  Chosen Increment (>1) is less than optimal.  Increments would optimally be <=1.\n"
       print(message)
-      #closeOutput(file=fileName3,output=Output,console=Console,opar=opar)
       errMsg=paste(errMsg,message)
     }
+
+    #####################################################################################################
+    #                                                                                                   #
+    #        RowCnt, printYlab1: *RowCnt* is the count of the number of rows in the matrices needed     #
+    #                to hold the repeating variables, one set for each loop.                            #
+    #                The Y column header string, *printYlab1*, is built, for use at the top             #
+    #                of the PDF file.  It may be a column number, or a string from the header.          #
+    #                or a string from the header.                                                       #
+    #        Ycol, OriginalYcol:  reset                                                                 #
+    #        PDF printing preparation:  margins and layout are setup; numerical results are printed     #
+    #        StartDateP, EndDateP:  the dates are converted for printing. (re converted at line 1572)   #
+    #                                                                                                   #
+    #####################################################################################################
     
     # How many loops?  the integer (truncated) part of 1 + (tau-s/tau-e -1)/delta.
     RowCnt<-floor(1 + ((Period$Start/Period$End)-1)/FreqInc)      #  using ceiling with out 1+ is not equivalent, as non integer result is 1 too small
@@ -678,12 +822,20 @@ if (Increment> MyData_hours) {
     print("resetting freq start and inc")
   }
 
-# moved array definitions from HERE
-  for (y in 1:Ys_end){
-    Ycol<-Y[y]
+    Ycol<-2         #  Y[y]  8/30/2017    the variable data is always in column 2
+    OriginalYcol<-Y[y]  #  for all printable info, show the user the original column number and name
+    if (yLabel==""){
+      printYlab<-names(MyDataRead)[OriginalYcol]      #not printYlab1  10/6/2017
+      if (header==FALSE){
+        printYlab<-paste("Data Column",OriginalYcol)      #not printYlab1  10/6/2017
+      }
+    } else {
+      printYlab<-yLabel       #not printYlab1  10/6/2017
+    }
+
     #par(mfrow=c(3,1),mar=c(4,4,2,1))   # 6/10/2016
     #  test 6/10/2016  layout(matrix(c(1,2,3), 3, 1, byrow = TRUE), widths=c(1), heights=c(1,3,3))   #   this gets reset in CatWindow, but is needed when j>1       
-    paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\nPercent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n")
+    #this is built on line 546   paramMsg<-paste("\n  TimeCol=",TimeCol,",  Y=",Y, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\n Data hrs=",format(MyData_hours,nsmall=3),"  dt=",format(dt,nsmall=3)," hours\nPercent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n")
     # Use the periodogram
 #     if (window!="noTaper"){
 #       CatWindowList<-CatWindow(window=window,myData=MyData[,Ycol],Time=MyData$time.hour,dataN=MyData_length,Start=MyData$time.hour[1]+StartSpans[1]-1)    # plots the full set of data w/filter
@@ -715,7 +867,19 @@ if (Increment> MyData_hours) {
 #       CatPeriodogram<- CatPeri(CatWindowList$data,binsPerHr=1/dt, Hx=.15, cex=.9, Debug=FALSE)    # pass samples/day when units=hrs
 #     } else {plot.new()}
       cat("\n\tPR\t\t   F\t\t\tP \tSS[j]\t i\t cycle \t  Mesor \t  s.e. \t \t  Amp \t\t s.e. \t \tPhi\t\t s.e.\n")
-
+    
+    #####################################################################################################
+    #                                                                                                   #
+    #        Set up variables needed for printing the model:  decide if all models are printed or only 1#
+    #                Usually we want to print the model across all test data, however if there is       #
+    #                too much data, or to many models, the printout will be unreadable (black),         #
+    #                in which case only one  model is printed.  Thus we need to know the LCM if a       #
+    #                multiple component cosinor is being computed.  And we need to define a model       #
+    #                length.  These are used in computing how many models or how much data can          #
+    #                be sensibly plotted and displayed.                                                 #
+    #                                                                                                   #
+    #####################################################################################################
+    
 realLCM<-LCM
 if (minPeriod==0){  #  if this is a LS
   modelLen<-360
@@ -730,8 +894,20 @@ if (minPeriod==0){  #  if this is a LS
 if (modelLen<360){      # should be at least 360 points generated in a model
   modelLen<-360        # how many points to calculate in the model (for valid plotting representation of cycle -- to avoid aliasing)  
 }
-
-#SubjectID<-vector(mode="integer",length = Components)
+    
+    #####################################################################################################
+    #                                                                                                   #
+    #        Progressive setup:   Set up variables for holding model values and results                 #
+    #                There needs to be an array for each, capable of holding a full set of variables    #
+    #                for each progressive iteration.  The number of iterations is held in               #
+    #        ProgressionEnd
+    #                in which case only one  model is printed.  Thus we need to know the LCM if a       #
+    #                multiple component cosinor is being computed.  And we need to define a model       #
+    #                length.  These are used in computing how many models or how much data can          #
+    #                be sensibly plotted and displayed.                                                 #
+    #                                                                                                   #
+    #####################################################################################################
+    
 M <- matrix(data=NA,nrow=RowCnt, ncol=Progression_end)
 Model_Y <- matrix(data=NA,nrow=RowCnt, ncol=modelLen)
 Model_Y_mag <- matrix(data=NA,nrow=RowCnt, ncol=modelLen)
@@ -745,8 +921,10 @@ PHIr <- array(data=NA,c(RowCnt, Progression_end,Components))
 A <- array(data=NA,c(RowCnt, Progression_end,Components))
 PR <- array(data=NA,c(RowCnt, Progression_end,Components))
 P <- array(data=NA,c(RowCnt, Progression_end,Components))
-testPg <- array(data=NA,c(RowCnt, Progression_end,Components))
-testPb <- array(data=NA,c(RowCnt, Progression_end,Components))
+#P2 <- array(data=NA,c(RowCnt, Progression_end,Components))
+newF <- array(data=NA,c(RowCnt, Progression_end,Components))
+#testPg <- array(data=NA,c(RowCnt, Progression_end,Components))
+#testPb <- array(data=NA,c(RowCnt, Progression_end,Components))
 F <- array(data=NA,c(RowCnt, Progression_end,Components))
 mesor_se <- matrix(data=NA,nrow=RowCnt, ncol=Progression_end)
 phi_se <- array(data=NA,c(RowCnt, Progression_end,Components))
@@ -808,19 +986,19 @@ Page<-0
 
           if (oneCycle[1]>0){   #  not LSS 
             if (Components==1){   #  single component
-              main<-paste("Each Period from single-component COSINOR: Column",Ycol)
+              main<-paste("Each Period from single-component COSINOR: ",printYlab)       #not printYlab1[y]  10/6/2017
             } else {      #  multiple component
-              main<-paste("Each Period from multiple-component COSINOR: Column",Ycol)
+              main<-paste("Each Period from multiple-component COSINOR: ",printYlab)       #not printYlab1[y]  10/6/2017
             }
           } else {   #  LSS
             if (Progression_end==1){     #  not a progressive, but spectrum
-              main<-paste("Maximum Period from COSINOR Least Squares Spectrum: Data Column",Ycol)    
+              main<-paste("Periods of max Ampl from COSINOR Least Squares Spectrum: ",printYlab)       #not printYlab1[y]  10/6/2017
             } else {
-              main<-paste("Maximum Period from COSINOR Gliding Spectrum: Data Column",Ycol)
+              main<-paste("Periods of max Ampl from COSINOR Gliding Spectrum: ",printYlab)         #not printYlab1[y]  10/6/2017
             }
           }
           if (j==1){
-            mtext(paste('Function:',functionName,"  ",fileName1,"; TimeCol=",TimeCol," Ycol=",Ycol, " RefDateTime=",RefDateTime),side=1,line = 1, cex =.7)    # , adj=.9
+            mtext(paste('Function:',functionName,"  ",fileName1,"; TimeCol=",TimeCol," Ycol=",OriginalYcol, " RefDateTime=",RefDateTime),side=1,line = 1, cex =.7)    # , adj=.9
             mtext(paste(window,"  ",thisTime," Units=",Units, " Interval=",format(Interval,digits=6), " Increment=",format(Increment,digits=6), " header=",header," Set=",Period["Set"], "Start/End=", format(Period$Start,digits=6),"/",format(Period$End,digits=6)),side=1,line = 2, cex =.7)
           } else {
             mtext(paste("P",Page),side=1,line = 4, cex =cexVar, adj=-.1)
@@ -833,8 +1011,8 @@ Page<-0
           abline(h=hdrRow-.3)    
           #page footer
           }
-        
-          maxAmp<-max2Amp<-max3Amp <- 1  
+      
+          max3Amp<-max2Amp<-maxAmp<-1
           StartSpanTime<-StartTime+StartSpans[j]    # Feb 2014 added back in; 11/4  StartTime+StartSpans[j]-1 # 10/18 added StartTime+ DH;  9/30  MyData$time.hour[1]+StartSpans[j]-1
           EndSpanTime<-StartSpanTime +Interval          # 6/14 no subtraction; 5/2014 subtract 1 oneSec instead; 9/30  -1***adj to match gc  Add Interval length to the last Interval StartSpans[j]+Interval to get the ending of the Interval
          # when using 24 hour progressive Interval, if should not go from 8:00 to 8:00 in one Interval, should only go from 8:00 to 7:59:59!  
@@ -845,10 +1023,7 @@ Page<-0
            if (EndSpanTime>MyData_hours+StartTime){   # Feb 2014 had to add + StartTime to these 2 lines
             EndSpanTime<-MyData_hours+StartTime
           }
-          #if (EndSpan>EndTime){
-          #  print("**************what to do about this???****************")
-          #  EndSpan<-MyData_hours
-          #}
+#browser()
           if (Progression_end==j){                  #  6/14   last (or only) spans need to be treated differently than all others
             # needed to round because equal numbers didn't compare as equal due to differing precisions  (116.5333333 <> 116.5333)
             TimeIdx<-which(round(EndSpanTime,digits=10) >= round(MyData$time.hour,digits=10))   #  should be gte;  get indices UP TO the end of this Interval
@@ -866,14 +1041,12 @@ Page<-0
             Cycles<-oneCycle
             Loops<-1
           }
-          #cat("StSpan ",StartSpans[j]," Interval ",Interval," EndSpan ",EndSpan," StrtIdx ",StartIdx, " EndIdx ",EndIdx," thisIdxCnt ",thisIdxCnt," j ",j,"\n")
+        if (Debug){
+          cat("StSpan ",StartSpans[j]," Interval ",Interval," EndDate ",EndDate," StrtIdx ",StartIdx, " EndIdx ",EndIdx," thisIdxCnt ",thisIdxCnt," j ",j,"\n")
+        }
         if (window != "noTaper"){          # calculates a window for the Interval
           # pass exact interval-1!!!!
-          #browser()
           CatWindowList<-CatWindow(window=window,myData=MyData[StartIdx:EndIdx,Ycol],Time=MyData$time.hour[StartIdx:EndIdx],dataN=Interval_hours,Start=StartSpanTime, debug=Debug)
-          #CatWindowList<-CatWindow(window=window,myData=MyData[,Ycol],Time=MyData$time.hour,dataN=MyData_length,Start=MyData$time.hour[1]+StartSpans[1]-1)    # earlier in CATcosinor
-          #9/13 CatWindowList<-CatWindow(window=window,myData=MyData[,Ycol],Time=MyData$time.hour,dataN=MyData_hours,Start=MyData$time.hour[1]+StartSpans[1]-1) 
-          #CatWindow(window=window,myData=MyData[StartIdx:EndIdx,Ycol],Time=MyData$time.hour[StartIdx:EndIdx],dataN=(EndIdx-StartIdx+1),Start=StartSpanTime)   #later in catcosinor
           newData<-CatWindowList$data
         } else { newData<-MyData[StartIdx:EndIdx,Ycol]}
 
@@ -886,19 +1059,22 @@ Page<-0
         sumMedian[y,j]<-median(newData, na.rm=TRUE)   
 
         sumSD[y,j]<-sqrt(var(newData,y=NULL))
-        sumTab<-tabulate(newData*1000)          #  acts only on integer values, ensure integer;   each value is counted in it's cardinal location     
-        dTtest<-which(sumTab == max(sumTab, na.rm=TRUE))/1000   #  
-        
+        #the next two lines are an old implementation of MODE, but large numbers with decimal places cause it to be SLOOOOOOOOW
+        #sumTab<-tabulate(newData*1000)          #  acts only on integer values, ensure integer;   each value is counted in it's cardinal location     
+        #dTtest<-which(sumTab == max(sumTab, na.rm=TRUE))/1000   #  
+        # The next two lines are an alternate method.  But in the case of large numbers with decimal places, there will be no maximal value....all unique values
+        #sumTab<-diff(newData)         #  so we have decided to exclude this calculation from the output            
+        #dTtest<-median(sumTab, na.rm=TRUE)
+
         sumT[y,j]<-dt
-        if (length(dTtest)>1){    # if more than 4 are the same as the max dT, use mean instead of median
-          sumMode[y,j] <- mean(dTtest, na.rm=TRUE)
-        } else {sumMode[y,j]<-dTtest   #  ????way to find dt for non-equidistant data
-        }
+        # if (length(dTtest)>1){    # if more than 4 are the same as the max dT, use mean instead of median
+        #   sumMode[y,j] <- mean(dTtest, na.rm=TRUE)
+        # } else {sumMode[y,j]<-dTtest   #  ????way to find dt for non-equidistant data
+        #}
 
           for (i in 1:Loops){
             # fit sinusoidal model
             if (oneCycle[1]==0){                  #  if a period has been specified, use present cycle
-              #cycle<-Interval/(i-(StartSpans[j]-1))       #  divisor should start at one each time this loop restarts
               cycle<-Period$Start/(1+((i-1)*FreqInc))          ####  Interval/(1+((i-1)*FreqInc))  from Interval/i
               } else cycle<-Cycles[i]
 
@@ -912,12 +1088,13 @@ Page<-0
             }
 
             Cycle[i,j,1]<-cycle                    # store for later 
-            yVar[i,j]<-names(MyData)[Y[y]]
+            yVar[i,j]<-names(MyData)[Ycol]    #yloop change to Ycol
             hours[i,j] <- paste(format(StartSpanTime,nsmall=1)," - ",format(EndSpanTime,nsmall=1),sep="")  # took :59 off because can be decimal hrs;  this shows ALL used
             cycleCnt<-(EndSpanTime-StartSpanTime)/cycle
             minPtCnt<-2*cycleCnt+1
             nPts[i,j] <- EndIdx-StartIdx+1
             sPts[i,j] <- paste(StartIdx,"-",EndIdx,"\n(",nPts[i,j],")")
+
             time[i,j] <- paste(MyData[StartIdx,TimeCol],"-\n",MyData[EndIdx,TimeCol])
             if (nPts[i,j]<=minPtCnt) {        #  not enough data points for the trial period being analzyed.
               print(paste(keyMsgs[5],"C=",2*cycleCnt+1,"min pts=",minPtCnt))
@@ -992,12 +1169,13 @@ Page<-0
               if (det(mdat)<.00000000001){
                 Err[i,j,]<-paste(Err[i,j,],":",errKey[2])         # "**     #  Err holds all error symbols for this element;  add this error
                 print(keyMsgs[2])
+                #browser()
                 next
               }  else {mdatInv <- solve(mdat)
 
             #multiply the inverted matrix by the dependent variable matrix to get vector M, B, G, B2, G2, ...   (x=inv(S)b)
             coefs <- mdatInv  %*%  mdat2
-            #browser()
+
             if (Debug==TRUE || i==Interval){
                 #print(TimeIdx)
               #print(crsprd)
@@ -1030,12 +1208,14 @@ Page<-0
                 if (!is.na(coefs[beta]) && !is.na(coefs[gamma])){
                     #Calculate Amplitude using B and G   (coefs[beta]=Beta)
                     A[i,j,m]<-(coefs[beta]^2+coefs[gamma]^2)^0.5
-                    #  cat("A",A[i,j,m],"max",A[maxAmp,j,m],"m",m,"maxAmp",maxAmp)
+                    if (Debug){
+                      cat("A",A[i,j,m],"max",A[maxAmp,j,m],"m",m,"maxAmp",maxAmp,"\n")
+                    }
                     #preserve the index for the cycle with the maximum amplitude  
-                    #browser()
-                    if (is.na(A[maxAmp,j,m])){   #  this does not capture the maxAmp for multiple components properly
-                      maxAmp<-i
-                      } else if (A[i,j,m]>A[maxAmp,j,m]) {
+                    # if (is.na(A[maxAmp,j,m])){   #  removed 10/30/17 #this does not capture the maxAmp for multiple components properly
+                    #   maxAmp<-i
+                    #   } else 
+                    if (A[i,j,m]>A[maxAmp,j,m]) {
                         max3Amp<-max2Amp     # getting top 3 amplitudes
                         max2Amp<-maxAmp
                         maxAmp<-i
@@ -1044,6 +1224,10 @@ Page<-0
                           max2Amp<-i
                           } else if (A[i,j,m]>A[max3Amp,j,m]) {
                             max3Amp<-i     # getting top 3 amplitudes
+                          } else if (i==2) {   # setting max2Amp and max3Amp to something other than 1 so they can be compared.
+                            if (max2Amp==1) max2Amp <-2
+                          } else if (i==3) {
+                            if (max3Amp==1) max3Amp <-3
                           }
 
                       # Calculate Model:  Y(t) = M + bX + gZ    where X=cos(t2pi/cycle) and Z = sin(t2pi/cycle)
@@ -1088,7 +1272,6 @@ Page<-0
                 } else {  #  end only-if coefs can be calculated  -- this error not needed
                         Err[i,j,m]<-paste(Err[i,j,m],":",errKey[4])   #  ++
                         print(keyMsgs[4])
-                        #browser()
                         next
                 }    #  end only-if coefs can be calculated
             }   # end coef calculation for each component
@@ -1101,7 +1284,6 @@ Page<-0
               multi_MSS<-sum(MYhat_Ymean^2)
             }
             MY_Yhat <- newData- Model_Y     # my Y-Yhat
-            #browser()
             RSS<-sum(MY_Yhat^2)
             if (RSS==0) {
               print(keyMsgs[6])
@@ -1124,40 +1306,53 @@ Page<-0
               multi_F<-(multi_MSS/df1)/(RSS/(df2))       #  df1 = 2, since MSS is for one component;  df2 is for full model
               multi_P[i,j]<-1-pf(multi_F,df1=df1, df2=df2)              # Fisher-Snedecor (F ) (X2 ) 
               multi_PR[i,j]<-(multi_MSS/(RSS+multi_MSS))*100
-              cat("F-multi:",multi_F,"\n")
+              if (Debug==TRUE){
+                cat("aa  F-multi:",multi_F," df1 ",df1," df2 ",df2," multi_P ",multi_P[i,j],"\n")
+              }
             } 
            
             SigmaHat<-(RSS/(df2))^.5
-            #cat(thisIdxCnt," sHat ",SigmaHat,"\t",PR[i,j],"\t",F[i,j],"\t ",P[i,j],"\t ")
-
+            if (Debug==TRUE){
+              cat("bb ", thisIdxCnt," sHat ",SigmaHat,"PR\t",PR[i,j,m],"\tF\t",F[i,j,m],"\tP\t ",P[i,j,m],"\t ")
+            }
             mesor_se[i,j] <-SigmaHat * mdatInv[1,1]^.5
 
             #   for testing alternate formula for individual P
             for (m in 1:Components){
-              F[i,j,m]<-(MSS[m]/2)/(RSS/(df2))       #  df1 = 2, since MSS is for one component;  df2 is for full model
-              P[i,j,m]<-1-pf(F[i,j,m],df1=2, df2=df2)              # Fisher-Snedecor (F ) (X2 )
-              if (Debug==TRUE){
-                cat("F:df1-df2",F[i,j,m],2,df2,"MSS",MSS[m],"RSS",RSS,"\n")
-              }
-              # testing alternate formula for individual P
+              ## F[i,j,m]<-(MSS[m]/2)/(RSS/(df2))       #  df1 = 2, since MSS is for one component;  df2 is for full model
+              ## P[i,j,m]<-1-pf(F[i,j,m],df1=2, df2=df2)              # Fisher-Snedecor (F ) (X2 )
+              ## if (Debug==TRUE){
+              ##   cat("cc  F:df1,df2 ",F[i,j,m],": ",2,", ",df2," MSS ",MSS[m],"RSS",RSS,"\n")
+              ## }
+              # corrected formula for P;  this is validated 6/7/2017 for EACH component's F, P when multiple component model
               tInd1<-2*m
               tInd2<-2*m+1
               beta<-2*m
               gamma<-2*m+1
-              #   excludes diagonals of inverse matrix, which may be important
-              test<-(mdatInv[tInd2,tInd2]*coefs[beta]^2)+2*mdatInv[tInd1,tInd2]*coefs[beta]*coefs[gamma]+mdatInv[tInd1,tInd1]*coefs[gamma]^2
-              test2<-test/(mdatInv[tInd1,tInd1]*mdatInv[tInd2,tInd2]-mdatInv[tInd1,tInd2]^2)
-              test3<-test2/(2*SigmaHat^2)
-              testPg[i,j,m]<-1-pf(test3,df1=2, df2=df2) 
 
-              #  alternative calculation for F    p 409 Bingham [33] 
-              testXmean<-(CosMatrix[1,tInd1])/thisIdxCnt    #  X mean
-              testZmean<-(CosMatrix[1,tInd2])/thisIdxCnt    #  Z mean
-              testX2<-sum((CosCoMatrix1[tInd1,] * CosCoMatrix1[1,]-testXmean)^2)   #  X 
-              testZ2<-sum((CosCoMatrix1[tInd2,] * CosCoMatrix1[1,]-testZmean)^2)   #  Z 
-              testXZ<-sum((CosCoMatrix1[tInd1,] * CosCoMatrix1[1,]-testXmean)*(CosCoMatrix1[tInd2,] * CosCoMatrix1[1,]-testZmean))   #  XZ 
-              testF<-(testX2 * coefs[beta]^2 + 2*testXZ * coefs[beta] * coefs[gamma] + testZ2 * coefs[gamma]^2)/(2*SigmaHat^2)
-              testPb[i,j,m]<-1-pf(testF,df1=2, df2=df2)
+              newF1<-(mdatInv[tInd2,tInd2]*coefs[beta]^2-2*mdatInv[tInd1,tInd2]*coefs[beta]*coefs[gamma]+mdatInv[tInd1,tInd1]*coefs[gamma]^2)/(mdatInv[tInd1,tInd1]*mdatInv[tInd2,tInd2]-mdatInv[tInd1,tInd2]^2)
+              F[i,j,m]<- (newF1/2)/(RSS/df2)
+              P[i,j,m]<-1-pf(F[i,j,m],df1=2, df2=df2)
+            
+              #   Pger  -- excludes diagonals of inverse matrix, which may be important
+              # test<-(mdatInv[tInd2,tInd2]*coefs[beta]^2)+2*mdatInv[tInd1,tInd2]*coefs[beta]*coefs[gamma]+mdatInv[tInd1,tInd1]*coefs[gamma]^2
+              # test2<-test/(mdatInv[tInd1,tInd1]*mdatInv[tInd2,tInd2]-mdatInv[tInd1,tInd2]^2)
+              # test3<-test2/(2*SigmaHat^2)
+              # testPg[i,j,m]<-1-pf(test3,df1=2, df2=df2) 
+              if (Debug==TRUE){
+                cat("cc2  F:df1,df2 ",F[i,j,m],": ",2,", ",df2," P ",P[i,j,m],"\n")
+                cat("pre  tInd1",tInd1," mdatInv[tInd2,tInd2] ",mdatInv[tInd2,tInd2],"  coefs[beta] ",coefs[beta]," mdatInv[tInd1,tInd2] ",mdatInv[tInd1,tInd2]," coefs[gamma] ",coefs[gamma]," mdatInv[tInd1,tInd1] ",mdatInv[tInd1,tInd1],"\n")
+                #cat("cc  F:df1,df2",test3,": ",2,", ",df2," test2 ",test2," test ",test,"\n")
+              }
+
+              #  Pbin  -- alternative calculation for F    p 409 Bingham [33] 
+              # testXmean<-(CosMatrix[1,tInd1])/thisIdxCnt    #  X mean
+              # testZmean<-(CosMatrix[1,tInd2])/thisIdxCnt    #  Z mean
+              # testX2<-sum((CosCoMatrix1[tInd1,] * CosCoMatrix1[1,]-testXmean)^2)   #  X 
+              # testZ2<-sum((CosCoMatrix1[tInd2,] * CosCoMatrix1[1,]-testZmean)^2)   #  Z 
+              # testXZ<-sum((CosCoMatrix1[tInd1,] * CosCoMatrix1[1,]-testXmean)*(CosCoMatrix1[tInd2,] * CosCoMatrix1[1,]-testZmean))   #  XZ 
+              # testF<-(testX2 * coefs[beta]^2 + 2*testXZ * coefs[beta] * coefs[gamma] + testZ2 * coefs[gamma]^2)/(2*SigmaHat^2)
+              # testPb[i,j,m]<-1-pf(testF,df1=2, df2=df2)
 
               if (Components>1){      # multiple components model 
                 PR[i,j,m]<-(MSS[m]/(RSS+multi_MSS))*100
@@ -1172,17 +1367,17 @@ Page<-0
               
               if (Debug==TRUE){
                 cat(" seM ",mesor_se[i,j]," seA ",amp_se[i,j,m]," sePHI ",phi_se[i,j,m]," \n")
-                cat("test3",m,"   ",test3,"\n")
-                cat("testPg",m,"   ",testPg[i,j,m],"\n")
-                cat("testF",m,"   ",testF,"\n")
-                cat("testPb",m,"   ",testPb[i,j,m],"\n")
+                #cat("test3",m,"   ",test3,"\n")
+                #cat("testPg",m,"   ",testPg[i,j,m],"\n")
+                #cat("testF",m,"   ",testF,"\n")
+                #cat("testPb",m,"   ",testPb[i,j,m],"\n")
                 cat(thisIdxCnt,"\t","sigma ",SigmaHat,"\t",PR[i,j,m],"\t",F[i,j,m],"\t ",P[i,j,m],"\t \n")
                 cat(StartSpans[j],"\t",i,"\t",format(Cycle[i,j,m],width=3), "\t ",M[i,j],"\t", format(mesor_se[i,j],digits=8),"\t",A[i,j,m],"\t",format(amp_se[i,j,m],digits=8),"\t",format(PHI[i,j,m],digits=8),"\t",format(phi_se[i,j,m],digits=8),"\n")
               }
               if (oneCycle[1]>0){   # print this cycle result if  oneCycle parameter set is>0
                 #ht<-hdrRow+.5-(i+(j*htVar))+jht-(m-1)
                 ht<-hdrRow+.5-(i+(j*htVar))+jht-(m-1)
-#browser()
+
                 #  prints period and estimates for each period in a range
                 text(c(-.4,1.2,2,3,3.9,5.1,6.2,7.2,8.2,9.2),c(ht,ht,ht,ht,ht,ht,ht,ht,ht,ht,ht),labels=c(paste(StartSpans[j]," - ",format(StartSpans[j]+Interval-1,nsmall=3)),format(Cycle[i,j,m],nsmall=2),format(P[i,j,m],digits=3,nsmall=3),format(newPR[i,j,m],digits=5),format(M[i,j],digits=8), format(mesor_se[i,j],digits=6),format(A[i,j,m],digits=6),format(amp_se[i,j,m],digits=6),format(PHI[i,j,m],digits=6),format(phi_se[i,j,m],digits=6)),cex=(cexVar*1.2),adj = c(0,0))
               }   #   format(F[i,j,m],digits=5),   removed 
@@ -1214,7 +1409,7 @@ Page<-0
             } else {
               jMult<-(j+3)%%16 + 12.5      # 13  32%%16=0  11.25  11.75   %16
             }
-            #browser()
+
             ht<-hdrRow-(jMult*htVar)+jht #- (j/10)       #8    5, 10, 11, 20, 15, 25
             # prints only the max for each spectrum of frequencies
             text(c(-.4,1.2,2,3,3.9,5.1,6.2,7.2,8.2,9.2),c(ht,ht,ht,ht,ht,ht,ht,ht,ht,ht,ht),labels=c(paste(StartSpans[j]," - ",format(StartSpans[j]+Interval-1,nsmall=3)),format(Cycle[maxAmp,j,Components],nsmall=2),format(P[maxAmp,j,Components],digits=3,nsmall=3),format(newPR[maxAmp,j,Components],digits=5),format(M[maxAmp,j],digits=6), format(mesor_se[maxAmp,j],digits=6),format(A[maxAmp,j,Components],digits=6),format(amp_se[maxAmp,j,Components],digits=6),format(PHI[maxAmp,j,Components],digits=6),format(phi_se[maxAmp,j,Components],digits=6)),cex=cexVar,adj = c(0,0))
@@ -1225,11 +1420,11 @@ Page<-0
             # prints 3rd max for each spectrum of frequencies
             text(c(-.4,1.2,2,3,3.9,5.1,6.2,7.2,8.2,9.2),c(ht,ht,ht,ht,ht,ht,ht,ht,ht,ht,ht),labels=c(paste(StartSpans[j]," - ",format(StartSpans[j]+Interval-1,nsmall=3)),format(Cycle[max3Amp,j,Components],nsmall=2),format(P[max3Amp,j,Components],digits=3,nsmall=3),format(newPR[max3Amp,j,Components],digits=5),format(M[max3Amp,j],digits=6), format(mesor_se[max3Amp,j],digits=6),format(A[max3Amp,j,Components],digits=6),format(amp_se[max3Amp,j,Components],digits=6),format(PHI[max3Amp,j,Components],digits=6),format(phi_se[max3Amp,j,Components],digits=6)),cex=cexVar,adj = c(0,0))
           }   else {   #  end oneCycle==0  LS
-            #browser() 
-            if (yLabel==""){
-              printYlab<-names(MyData)[Y[y]]
+
+          if (yLabel==""){
+              printYlab<-names(MyData)[yy]    #  yloop change to Ycol  Not OriginalYCol, but yy ()
               if (header==FALSE){
-                printYlab<-paste("Column",Y[y])
+                printYlab<-paste("Column",OriginalYcol)
               }
             } else {
               printYlab<-yLabel
@@ -1259,7 +1454,7 @@ Page<-0
                 cosPalette[1]<-"blue"       # make fundamental period black
               }
             }
-            #browser()
+
             if ((realLCM*.99)<=LCM && LCM<=(realLCM*1.01)){
               # calculate bathyphase, orthophase and appropriate times for them  (don't print these if i>1)  ONLY IF FULL MODEL in plotModel
               Bathyphase[i,j]<- 0-(which.min(plotModel)+((StartSpans[j]%%LCM)*360/LCM)+((StartTime%%LCM)*360/LCM))%%360      #     0-which.min(plotModel)  xxx0-(which.min(plotModel)/(Interval/LCM)*360)  
@@ -1267,8 +1462,10 @@ Page<-0
               bathyTime<- RefTime + (which.min(plotModel)*dTime*3600) 
               Orthophase[i,j]<- 0-(which.max(plotModel)+((StartSpans[j]%%LCM)*360/LCM)+((StartTime%%LCM)*360/LCM))%%360 
               orthoTime<- RefTime + (which.max(plotModel)*dTime*3600) 
-              #             cat("ortho",Orthophase[i,j],"bathy",Bathyphase[i,j]) 
-              #             cat("ortho",orthoTime,"bathy",bathyTime)
+              if (Debug){
+                cat("ortho",Orthophase[i,j],"bathy",Bathyphase[i,j]) 
+                cat("ortho",orthoTime,"bathy",bathyTime)
+              }
             } else {
               # If the interval is not the same as the REAL LCM, then we do not have a full model, so max/min would not be correct for full model
               Bathyphase[i,j]<- NA
@@ -1302,7 +1499,7 @@ Page<-0
                      cexAxis<-.7
               }
               #  if not too long, graph both model and data;  else skip this and print ONLY MODEL
-              if (Interval_hours<500 && CyclesLCM<100){          #  j<11 is for debug, and should be removed   #Interval_hours<350 && 
+              if ((Interval_hours<500 || MyData_length<500) && CyclesLCM<100){          #  j<11 is for debug, and should be removed   #Interval_hours<350 && 
                 #  ??????MyData_hours should not be needed here.....not always valid;  MyData_length can make plot unreadable if too many points plotted;  
                 #  MyData_hours is the analysis time frame.  Only the analysis timeframe is plotted, not full data
                 #  If modelLen >360, the ration of LCM to minPeriod is more than 60/1, and the plot may be lacking visible relevant info becasue of the long LCM vs minPeriod 
@@ -1343,7 +1540,6 @@ Page<-0
                 at.x<-(1/dTime) * (label.x-StartSpanTime)               #  these are the plot points for the data n* label            
 
               } else {  #  if too many then print only one model
-                # browser()
                 tempModel<-plotModel
                   x_range<-c(0,modelLen)         #+StartSpanTime         # this is same units as at.x
                   for (C in 1:cycleCnt){
@@ -1382,7 +1578,6 @@ Page<-0
               }   #  end model only
 
               ht<-6-(j*htVar)+jht
-
               #restore palette in case it was changed
               palette("default")
               if (cycleCnt>1){
@@ -1397,14 +1592,14 @@ Page<-0
         } # end NOT LS
       }    #   END for (j in 1:Progression_end){  ,seq(from=magTime[1],by=dTime,to=tail(magTime,1))
 
-    #  build title
+    #  build title   (is this used or line 855?  11/29/2017)
     startDateP<-as.POSIXct(strptime(x=StartDate, format="%Y%m%d%H%M", tz=tz))
     endDateP<-as.POSIXct(strptime(x=EndDate, format="%Y%m%d%H%M", tz=tz))
-    yTitle<-Y[y]
+    yTitle<-OriginalYcol   #  yloop change all to Ycol
 
     if (header==TRUE){
       if (length(names(myHeader))==0){
-        yTitle<-names(myHeader)[Y[y]]
+        yTitle<-names(myHeader)[OriginalYcol]
       } 
     }
 
@@ -1417,8 +1612,8 @@ Page<-0
         mapx <- 1/Cycle[,1,1:m]                ###F    m is current component      rev(Cycle[1:(i),1,m]) 
         mapx2 <- c(1:RowCnt)
         ampz <- A[1:i,,m] 
-        ampz[1,]<-1    #    why do I have to put fake data in here???? 
-        ampz[i,]<-1   #     map is all light otherwise because 1st and last are bigger
+        #ampz[1,]<-1    #    why do I have to put fake data in here???? 
+        #ampz[i,]<-1   #     map is all light otherwise because 1st and last are bigger
       } else {
         mapx <- 1/Cycle[,1,1:m]
         mapx2 <- c(1:m) 
@@ -1461,13 +1656,11 @@ Page<-0
       }#   end Color
 
       image(mapy, mapx, t(ampz), axes = FALSE, col=colorVar,main=HeatMain,ylab=HeatYlab,xlab=HeatXlab) #format(max(A, na.rm=TRUE)+max(A, na.rm=TRUE)*.2,digits=4)))      ###F    fill=rev(Nbw)
-      ###contour(mapy, mapx, t(ampz),  axes = FALSE, nlevels=lvlCnt, labels=HeatLegend3, add=TRUE, drawlabels=FALSE)     #format(max(A, na.rm=TRUE)+max(A, na.rm=TRUE)*.2,digits=4)))      ###F    fill=rev(Nbw)
       #col controls the colors used in graph;  breaks controls the range of values for each color
       par(xpd=TRUE)  # Do not clip to the drawing area
       lambda <- .025
       #  legend controls the location, numbers and colors shown on the legend.  No relationship to actual unless same is used.    changed:   par("usr")[4]-par("usr")[3])*.5
       legend(par("usr")[2],(par("usr")[4]-par("usr")[3])*.5,xjust = .5, yjust = -3,lwd=3, lty=1, title="Amplitude", legend=format(HeatLegend3,digits=4),fill=fillVar,text.width = strwidth("1.00"),cex=.5)                
-      #mtext('Progressive',side=1,line = 3, cex =.7, adj=1)
       #x axis corresponds to row number and the y axis to column number, with column 1 at the bottom, 
       #i.e. a 90 degree counter-clockwise rotation of the conventional printed layout of a matrix.
       axis(1, at = tickCnt)  
@@ -1476,20 +1669,6 @@ Page<-0
       rightAxis<-c(1:RowCnt)
       axis(4, at = mapx,labels=format(mapx2,digits=4))    #  cycles
       box()
-#       #  second plot with different Y axis.
-#       image(mapy, mapx2, t(ampz), axes = FALSE, col=colorVar,main=HeatMain,ylab=HeatYlab2,xlab=HeatXlab) #format(max(A, na.rm=TRUE)+max(A, na.rm=TRUE)*.2,digits=4)))      ###F    fill=rev(Nbw)
-#       ###contour(mapy, mapx2, t(ampz),  axes = FALSE, nlevels=lvlCnt, labels=HeatLegend3, add=TRUE, drawlabels=FALSE)     #format(max(A, na.rm=TRUE)+max(A, na.rm=TRUE)*.2,digits=4)))      ###F    fill=rev(Nbw)
-#       #col controls the colors used in graph;  breaks controls the range of values for each color
-#       par(xpd=TRUE)  # Do not clip to the drawing area
-#       lambda <- .025
-#       #  legend controls the location, numbers and colors shown on the legend.  No relationship to actual unless same is used.
-#       legend(par("usr")[2],(par("usr")[4]-par("usr")[3])*.5,xjust = 0, yjust = 0,lwd=3, lty=1, title="Amplitude", legend=format(HeatLegend3,digits=4),fill=fillVar,text.width = strwidth("1.00"),cex=.5)                
-#       mtext("Progressive",side=1,line = 3, cex =.7, adj=1)
-#       #x axis corresponds to row number and the y axis to column number, with column 1 at the bottom, 
-#       #i.e. a 90 degree counter-clockwise rotation of the conventional printed layout of a matrix.
-#       axis(1, at = tickCnt)  
-#       axis(2, at = 1:RowCnt)    #  cycles
-#       box()
 
     }  #else {  #  if a heatmap is built, too many periods for output
       
@@ -1522,17 +1701,11 @@ Page<-0
               if ((length(which(GraphSet==T))==1 && GraphSet$Data && l==1 && k==1) || length(which(GraphSet==T))>2) {
               # Calculate range from 0 to max value 
               if (m==1){      #    plotting when m==1, plot spans of progressive cosinor 
-                mainX<-paste("Column ",Ycol,";  Period",Cycle[k,j,l],";   Time (",Units,") from reference date: ",RefTime)
+                mainX<-paste("Column ",OriginalYcol,";  Period",Cycle[k,j,l],";   Time (",Units,") from reference date: ",RefTime)
               } else {      #     plotting when m>1 plots periods of each component
-                mainX<-paste("Column ",Ycol,";  Components",list(Cycle[,j,]),":   Time (",Units,") from reference date: ",RefTime)   #   Period$Set[l], = Cycle
+                mainX<-paste("Column ",OriginalYcol,";  Components",list(Cycle[,j,]),":   Time (",Units,") from reference date: ",RefTime)   #   Period$Set[l], = Cycle
               }
 
-
-#               if (window != "noTaper"){          # calculates a window for the Interval
-#                 CatWindowList<-CatWindow(window=window,myData=MyData[StartIdx:EndIdx,Ycol],Time=MyData$time.hour[StartIdx:EndIdx],dataN=(EndIdx-StartIdx+1),Start=StartSpanTime)
-#                 newData<-CatWindowList$data
-#               }
-#               else {
             if (GraphSet$Data && (l==1 || l==m) && k==1){    #2   if more than 1 component, do not print raw data again
                 plot(1:10,1:10,type="n",ylab="",axes=FALSE)   # 1 blank area
                 plot(MyData$time.hour[1:EndIdx],MyData[1:EndIdx,Ycol],type="l",xaxt="n",ylab=paste("data"),main=mainX)   #  should not use newData
@@ -1544,7 +1717,7 @@ Page<-0
                 
                 } else {plot(1:10,1:10,type="n",ylab="",axes=FALSE,main=mainX,cex.sub=cexMain,cex.main=cexMain)   # blank area
                         plot(1:10,1:10,type="n",ylab="",axes=FALSE)}   # blank area
-              #}
+
               g_range <- range(lineX)
 
               if (m==1){      #  only use for single components
@@ -1580,13 +1753,9 @@ Page<-0
                 #  end m=1
               }  else { #  if m!=1 then this is the full component model, and we need different graphs
                if (GraphSet$Amp && !all(is.na(Magnitude[k,]))){   # 4 if all NA, which.max will fail
-#                   ampMax<-which.max(Magnitude[k,,l])
-#                   ampMin<-which.min(Magnitude[k,,l])
-#                   seMax<-which.max(amp_se[k,,l])
-#                   seMin<-which.min(amp_se[k,,l])
+
                   plot(lineX,Magnitude[k,],type="l",xaxt="n",ylab="Magnitude",col=4)
-#                   points(lineX,(Magnitude[k,,l]+amp_se[k,,l]),type="p",pch=20,cex=.1,col=3)       # ,ylim=c(-360,0)
-#                   points(lineX,(Magnitude[k,,l]-amp_se[k,,l]),type="p",pch=20,cex=.1,col=3)
+
                   # Make x axis with horizontal labels that display ticks at 
                   # every LCM marks. .
                   axis(side=1, at=at.x)        #, labels = formatC(label.x, format = "fg")) 
@@ -1595,8 +1764,6 @@ Page<-0
                 if (GraphSet$Phi  && !all(is.na(Orthophase[k,]))){   # 5 if all NA, which.max will fail
                   plot(lineX,Orthophase[k,],type="l",xaxt="n",ylab="Orthophase",col=6,ylim=c(0,-360))
                   
-#                   points(lineX,(Orthophase[k,,l]+phi_se[k,,l]),type="p",pch=20,cex=.2,col=3)   
-#                   points(lineX,(Orthophase[k,,l]-phi_se[k,,l]),type="p",pch=20,cex=.2,col=3) 
                   # Make x axis with horizontal labels that display ticks at 
                   # every LCM marks. .
                   axis(side=1, at=at.x)        #, labels = formatC(label.x, format = "fg")) 
@@ -1605,8 +1772,6 @@ Page<-0
                 if (GraphSet$Phi  && !all(is.na(Bathyphase[k,]))){   # 5 if all NA, which.max will fail
                   plot(lineX,Bathyphase[k,],type="l",xaxt="n",ylab="Bathyphase",col=6,ylim=c(0,-360))
                   
-#                   points(lineX,(Bathyphase[k,,l]+phi_se[k,,l]),type="p",pch=20,cex=.2,col=3)   
-#                   points(lineX,(Bathyphase[k,,l]-phi_se[k,,l]),type="p",pch=20,cex=.2,col=3) 
                   # Make x axis with horizontal labels that display ticks at 
                   # every LCM marks. .
                   axis(side=1, at=at.x)        #, labels = formatC(label.x, format = "fg")) 
@@ -1652,18 +1817,11 @@ Page<-0
             } else {
             titleLable2<- paste("Periods:",list(Cycle[,1,]),Units, Ylable_inc)
           }
-#browser()
           plot(1:10,1:10,type="n",ylab="",axes=FALSE)   # 1 blank area
 
-#             if (window != "noTaper"){          # calculates a window for the Interval
-#               CatWindowList<-CatWindow(window=window,myData=MyData[StartIdx:EndIdx,Ycol],Time=MyData$time.hour[StartIdx:EndIdx],dataN=(EndIdx-StartIdx+1),Start=StartSpanTime)
-#               newData<-CatWindowList$data
-#             }
-#             else {
           if (GraphSet$Data){   #2, 3 cond
             plot(MyData$time.hour[StartIdx:EndIdx],newData,type="l",xaxt="n",ylab=paste("data*",window),main=titleMain)
             g_range <- range(MyData$time.hour[1:EndIdx])
-            #label.x<-seq(from=g_range[1], to=g_range[2], by=LCM)
             at.x<-seq(from=round(g_range[1]), to=round(g_range[2]), by=by.x)
             # Make x axis with horizontal labels that display ticks at 
             # every LCM marks. .
@@ -1702,33 +1860,32 @@ Page<-0
             
             plot(1:10,1:10,type="n",ylab="",axes=FALSE)   # 6 blank area
             mtext("Green dots = S.E. standard error",side=1,line = 2, cex =.8, adj=.7,col=3)
-          #}       # end K to Loops
+
         }  #  end m>1 || i>1  
         } # end else if j=1
       } # end if i>1 and Graphs == T
   }  #  end LineSetGraph==T
-#}  #  end not heat map
-
+#browser()
     if(Output$Doc || Output$Dat){
       if (y==1){
         if (Output$Doc){
           #  may need to chg to wd:  http://www.r-statistics.com/2010/05/exporting-r-output-to-ms-word-with-r2wd-an-example-session/
-          rtf<-RTF(fileName3,width=14,height=8.5,omi=c(.5,.25,.5,.25), font.size=11)
+          rtf<-RTF(fileName3,width=11,height=8.5,omi=c(.5,.25,.5,.25), font.size=11)
           output<-gsub(pattern='\b\b',replacement='\b',fileName3)
-          if (Period$Set[1]!=0){
-            paramMsg<-paste("Parameters:-----------------------------\n",output,"\n  TimeCol=",TimeCol,",  Ycol=",Ycol, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\nPercent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n-----------------------------\n\nReference Time:",RefTimeString)
-          } else {
-            paramMsg<-paste("Parameters:-----------------------------\n",output,"\n  TimeCol=",TimeCol,",  Ycol=",Ycol, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nPeriod$Start=",format(Period$Start,nsmall=3), ",  FreqInc=",format(FreqInc,nsmall=3), ",  Period$End=",format(Period$End,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\nPercent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n-----------------------------\n\nReference Time:",RefTimeString)
-          }
+          #if (Period$Set[1]!=0){
+            #this is built earlier at 546  paramMsg<-paste("Parameters:-----------------------------\n",output,"\n  TimeCol=",TimeCol,",  Ycol=",OriginalYcol, ",  header=",header,"\n --  Periods=",Period["Set"],", Units=",Units, ",  Interval=",format(Interval,nsmall=3), ",  Increment=",format(Increment,nsmall=3), "\nRefDateTime=",RefDateTime, ", StartTime=",format(StartTime,nsmall=3),", EndTime=",format(EndTime,nsmall=3),"\n Data hrs=",format(MyData_hours,nsmall=3),"  dt=",format(dt,nsmall=3)," hours\nPercent of missing (blank) sample values: %",missingData*100,"\n",functionName,"\n-----------------------------\n\nReference Time:",RefTimeString)
+            paramMsg<-paste("Parameters:-----------------------------\n",output,paramMsg,"\n-----------------------------\n\nReference Time:",RefTimeString)
+
             addParagraph(rtf,paramMsg)
-          addParagraph(rtf,errMsg)
+
           #errMsg<-""  
         }
         PRdigits<-2
-        PMAdigits<-3
+        PMAdigits<-2
         PHIdigits<-1
         fileoutCosX <- paste(fileName,window,thisTime,functionName,"Cos.dat",sep="")
       }
+
       if (!is.na(P[1])){
         printP<-formatC(P,digits=4,format="f")    #  this Cformat works better when formatting an entire vector!
       }
@@ -1736,42 +1893,69 @@ Page<-0
       sPtsX<-array(data=sPts,c(i,j,m))
       MX<-array(data=M,c(i,j,m))
       mesor_seX<-array(data=mesor_se,c(i,j,m))
+
       timeX<-array(data=time,c(i,j,m))
-      yVarX<-array(data=yVar,c(i,j,m))
+      yVarX<-array(data=yVar,c(i,j,m))    #  reformats yVar to 3D
       hoursX<-array(data=hours,c(i,j,m))
-      #ErrX<-array(data=Err,c(i,j,m))
 
       if(Output$Doc){
         if (window=="noTaper"){
-          addParagraph(rtf,"\n        Rhythmometric Summary")
+          addParagraph(rtf,paste("\n        Rhythmometric Summary of column ", OriginalYcol, printYlab,"-------------------------------------\n"))   #not printYlab1[y]  10/6/2017
         } else {
-          addParagraph(rtf,"\n        Rhythmometric Summary of filtered data")
+          addParagraph(rtf,paste("\n        Rhythmometric Summary of filtered data from column ", OriginalYcol, printYlab,"-------------------------------------\n"))   #not printYlab1[y]  10/6/2017
         }
-        if (Components>1){
+        addParagraph(rtf,errMsg)
+        addParagraph(rtf,paramMsg2)
+        errMsg<-''
+        # if (Progression_end==1){
+        #   addParagraph(rtf,paste("\n      Time Pts=",time[,1],"     hours from RefDateTime=",hours[,1],"     #Pts",sPts[,1]," "))   #  ,"Period in hrs=",Cycle  should not print when single component, multiple individual periods
+        # }
+        if (Components>1){           # ***************   Multiple   ************
           for (n in 1:Progression_end){
-            addParagraph(rtf,paste("\n column",Y[y],":    MESOR=",format(M[,n],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),"     MESOR s.e.=",format(mesor_se[,n],digits=2*PRdigits,nsmall=PMAdigits)))
-            addParagraph(rtf,paste("\n           Time Pts=",time[,n],"     hours from RefDateTime=",hours[,n],"     #Pts","Period in hrs=",sPts[,n]))
-            mat<-data.frame(matrix(c(Err[,n,],format(Cycle[,n,],nsmall=PRdigits),format(newPR[,n,],digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),printP[,n,],format(testPg[,n,],digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),format(testPb[,n,],digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),format(A[,n,],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(amp_se[,n,],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(PHI[,n,],digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se[,n,],digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE)),ncol=10))  #,dimnames=list(row_names,colName))
-            names(mat)<-c("Err","Period in Hrs","PR","P","P(Ger)","P(Bin)","Amp","Amp SE","PHI","PHI SE") # format column names
-            #addTable(rtf,mat,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.6,.3,1.3,1.05,.75,.6,.75,.6,.75,.75,.6,.6,.6,.6,.6))
-            # changed from above to below after a long time of not running multis  --  too many output values in col.widths vector
-            addTable(rtf,mat,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.6,.65,.75,.75,.75,.75,.7,.7,.7,.7))
+            addParagraph(rtf,paste("\n     MESOR=",format(M[,n],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),"     MESOR s.e.=",format(mesor_se[,n],digits=2*PRdigits,nsmall=PMAdigits)))
+            if (Progression_end>1){     # Multiple Progressive needs to see additional variables
+              mat<-data.frame(matrix(c(Err[,n,],timeX[,n,],hoursX[,n,],sPtsX[,n,],format(Cycle[,n,],nsmall=PRdigits),format(newPR[,n,],digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),printP[,n,],format(A[,n,],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(amp_se[,n,],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(PHI[,n,],digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se[,n,],digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE)),ncol=11))  #,dimnames=list(row_names,colName))
+              #if (n==1){                  #  Don't need header on successive rows of progressive 8/1/2017 but cannot get rid of it
+                names(mat)<-c("Err","Time Pts","hours from RefDateTime","#Pts","Period in Hrs","PR","P","Amp","Amp SE","PHI","PHI SE") # format column names
+              #}
+              # changed from above to below after a long time of not running multis  --  too many output values in col.widths vector
+              addTable(rtf,mat,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.75,1.3,1.05,.75,.6,.7,.6,.75,.6,.6, .6))
+              } else {      #  Multiple non progressive
+            #  chnaged from printP 5/24/2017
+              addParagraph(rtf,paste("\n      Time Pts=",time[,1],";               Hours from RefDateTime=",hours[,1],";     #Pts",sPts[,1],"Period in hrs=",Cycle," "))   #    should not print when single component, multiple individual periods
+              mat<-data.frame(matrix(c(Err[,n,],format(Cycle[,n,],nsmall=PRdigits),format(newPR[,n,],digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),printP[,n,],format(A[,n,],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(amp_se[,n,],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(PHI[,n,],digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se[,n,],digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE)),ncol=8))  #,dimnames=list(row_names,colName))
+              names(mat)<-c("Err","Period in Hrs","PR","P","Amp","Amp SE","PHI","PHI SE") # format column names
+              # changed from above to below after a long time of not running multis  --  too many output values in col.widths vector
+              addTable(rtf,mat,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.75,.65,.75,.75,.7,.7,.7,.7))
+          }
             printP_multi<-format(multi_P[i,n],digits=4,nsmall=PMAdigits)
             printP_multi[multi_P[i,n]<.0005]<-c("<.001")
-            #browser()    # total line on multi-component
-            addParagraph(rtf,paste("\nLCM",LCM,"  Overall:   PR=",format(multi_PR[i,n],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),"      P=",printP_multi,"       Magnitude=",Magnitude[i,n],"        Orthophase",Orthophase[i,n],"        Bathyphase=",Bathyphase[i,n],"\n\n"))
+            addParagraph(rtf,paste("\nLCM",LCM,"  Overall:   PR = ",format(multi_PR[i,n],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),"      P ",printP_multi,"       Magnitude = ",format(Magnitude[i,n],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),"        Orthophase = ",format(Orthophase[i,n],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),"        Bathyphase = ",format(Bathyphase[i,n],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),"\n\n"))
           }   #   End progressive where Components>1
-          } else {    #  Components =1
-
+          } else {                   #  ****************  Components =1  **********
+            #if (Progression_end>1){     # Progressive needs to see additional variables
+             # varProg<-rbind(Err, time,hours,sPts)
+              #nameProg<-c("Err","Time Pts","hours from RefDateTime","#Pts")
+              colProg<-c(.75,1.3,1.05,.75,.6,.7,.6,.75,.6,.6,.6,.6,.6)
+              ncolProg<-13
+            #} else {
+             #browser()
+              #varProg<-c(Err)
+              #nameProg<-c("Err","")
+              #colProg<-c(.1,.6,1,.6,.6,.65,.75,.75,.7,.7,.7)
+              #ncolProg<-11
+            #}
             if (is.na(newPR[1])){   #  formatC doesn't handle NAs
-              mat<-data.frame(matrix(c(Err,yVar,time,hours,sPts,format(Cycle,digits=2*PRdigits,nsmall=PRdigits),format(newPR,digits=4),printP,format(M,digits=5),format(mesor_se,digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(A,digits=5),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE)),ncol=14))  #,dimnames=list(row_names,colName))
+              mat<-data.frame(matrix(c(Err, time,hours,sPts,format(Cycle,digits=2*PRdigits,nsmall=PRdigits),format(newPR,digits=4),printP,format(M,digits=2*PMAdigits),format(mesor_se,digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(A,digits=2*PMAdigits),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE)),ncol=13))  #,dimnames=list(row_names,colName))
             } else {
-              mat<-data.frame(matrix(c(Err,yVar,time,hours,sPts,format(Cycle,digits=2*PRdigits,nsmall=PRdigits),formatC(newPR,digits=4,format="f"),printP,formatC(M,digits=5,format="f"),format(mesor_se,digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),formatC(A,digits=5,format="f"),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE)),ncol=14))  #,dimnames=list(row_names,colName))
+              mat<-data.frame(matrix(c(Err, time,hours,sPts,format(Cycle,digits=2*PRdigits,nsmall=PRdigits),formatC(newPR,digits=4,format="f"),printP,formatC(M,2*PMAdigits,format="f"),format(mesor_se,digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),formatC(A,digits=2*PMAdigits,format="f"),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE)),ncol=13))  #,dimnames=list(row_names,colName))
             }
+            # cannot append because it has to be the same length.  for some reason, putting header in doesn't work....
             #  commented out when doing trials of non-invertible matrix
-            #mat<-data.frame(matrix(c(yVarX,timeX,hoursX,sPtsX,format(Cycle,nsmall=PRdigits),format(PR,digits=2*PRdigits,nsmall=PRdigits),format(newPR,digits=2*PRdigits,nsmall=PRdigits),printP,format(MX,digits=2*PRdigits,nsmall=PMAdigits),format(mesor_seX,digits=2*PRdigits,nsmall=PMAdigits),format(A,digits=2*PRdigits,nsmall=PMAdigits),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits)),ncol=14))  #,dimnames=list(row_names,colName))
-            names(mat)<-c("Err","Y","Time Pts","hours from RefDateTime","#Pts","Period in hrs","PR","P","Mesor","Mesor SE","Amp","Amp SE","PHI","PHI SE") # format column names
-            addTable(rtf,mat,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.6,.3,1.3,1.05,.75,.6,.7,.6,.75,.6,.6,.6,.6,.6))   # col.widths=c(1,0.5,0.5,0.5,0.5)
+            #mat<-data.frame(matrix(c(t(varProg),t(mat)), ncol=ncolProg, byrow=FALSE))
+            names(mat)<-c("Err","Time Pts","hours from RefDateTime","#Pts","Period in hrs","PR","P","Mesor","Mesor SE","Amp","Amp SE","PHI","PHI SE") # format column names
+            #names(mat)<-append(names(mat),nameProg, 1)
+            addTable(rtf,mat,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.75,1.3,1.05,.75,.6,.7,.6,.75,.6,.6,.6,.6,.6))    #  c(.6,.1,.65,.75,.75,.7,.7,.7,.7)
           }
         #  summary of data
         if (window=="noTaper"){
@@ -1781,33 +1965,24 @@ Page<-0
         }
 
         if (Components>1){
-          #for (n in 1:Progression_end){
             # changed 1-->n below, without testing this:  matS<-data.frame(matrix(cbind(ErrX[y,1,m],yVarX[y,1,m],timeX[y,1,m],hoursX[y,1,m],sPtsX[y,1,m],format(sumN[y,1:Progression_end],nsmall=PRdigits),format(sumLow[y,1:Progression_end],nsmall=PRdigits),format(sumHi[y,1:Progression_end],nsmall=PRdigits),format(sumMean[y,1:Progression_end],nsmall=PRdigits),format(sumMedian[y,1:Progression_end],nsmall=PRdigits),format(sumMode[y,1:Progression_end],nsmall=PRdigits),format(sumT[y,1:Progression_end],nsmall=PRdigits),format(sumSD[y,1:Progression_end],nsmall=PRdigits)),ncol=13))  #,dimnames=list(row_names,colName))
             # removed for loop because we only need one instance of each interval for the data summary for progressives with multiple components
-            matS<-data.frame(matrix(cbind(Err[1,,m],yVarX[1,,m],timeX[1,,m],hoursX[1,,m],sPtsX[1,,m],format(sumN[y,1:Progression_end],nsmall=PRdigits),format(sumLow[y,1:Progression_end],nsmall=PRdigits),format(sumHi[y,1:Progression_end],nsmall=PRdigits),format(sumMean[y,1:Progression_end],nsmall=PRdigits),format(sumMedian[y,1:Progression_end],nsmall=PRdigits),format(sumMode[y,1:Progression_end],nsmall=PRdigits),format(sumT[y,1:Progression_end],nsmall=PRdigits),format(sumSD[y,1:Progression_end],nsmall=PRdigits)),ncol=13))  #,dimnames=list(row_names,colName))
+            matS<-data.frame(matrix(c(Err[1,,m],yVarX[1,,m],timeX[1,,m],hoursX[1,,m],sPtsX[1,,m],format(sumN[y,1:Progression_end],nsmall=PRdigits),format(sumLow[y,1:Progression_end],nsmall=PRdigits),format(sumHi[y,1:Progression_end],nsmall=PRdigits),format(sumMean[y,1:Progression_end],nsmall=PRdigits),format(sumMedian[y,1:Progression_end],nsmall=PRdigits),format(sumMode[y,1:Progression_end],nsmall=PRdigits),format(sumT[y,1:Progression_end],nsmall=PRdigits),format(sumSD[y,1:Progression_end],digits=4,nsmall=PRdigits)),ncol=13))  #,dimnames=list(row_names,colName))
             names(matS)<-c("Err","Y","Time Pts","hours from RefDateTime","#Pts","N","Low","High","Mean","Median","Mode","dT","s.d.") # format column names
-            addTable(rtf,matS,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.6,.3,1.3,1.05,1.4,.6,.6,.6,.75,.75,.6,.75,.75))
+            addTable(rtf,matS,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.75,.3,1.3,1.05,.85,.5,.6,.6,.75,.75,.5,.5,.5))
           
-          #}   #   End progressive where Components>1
         } else {    #  Components =1
-          #if (Progression_end>1){ 
-            # y,1,m is needed for progressive because we only need one instance of each interval 
-           #matS<-data.frame(matrix(cbind(Err[1,1,m],yVarX[1,1,m],timeX[1,1,m],hoursX[1,1,m],sPtsX[1,1,m],format(sumN[y,1:Progression_end],nsmall=PRdigits),format(sumLow[y,1:Progression_end],nsmall=PRdigits),format(sumHi[y,1:Progression_end],nsmall=PRdigits),format(sumMean[y,1:Progression_end],nsmall=PRdigits),format(sumMedian[y,1:Progression_end],nsmall=PRdigits),format(sumMode[y,1:Progression_end],nsmall=PRdigits),format(sumT[y,1:Progression_end],nsmall=PRdigits),format(sumSD[y,1:Progression_end],nsmall=PRdigits)),ncol=13))  #,dimnames=list(row_names,colName))
-          #} else {
-            # (used ,,m for non progressive)
-            matS<-data.frame(matrix(cbind(Err[1,,m],yVarX[1,,m],timeX[1,,m],hoursX[1,,m],sPtsX[1,,m],format(sumN[y,1:Progression_end],nsmall=PRdigits),format(sumLow[y,1:Progression_end],nsmall=PRdigits),format(sumHi[y,1:Progression_end],nsmall=PRdigits),format(sumMean[y,1:Progression_end],nsmall=PRdigits),format(sumMedian[y,1:Progression_end],nsmall=PRdigits),format(sumMode[y,1:Progression_end],nsmall=PRdigits),format(sumT[y,1:Progression_end],nsmall=PRdigits),format(sumSD[y,1:Progression_end],nsmall=PRdigits)),ncol=13))  #,dimnames=list(row_names,colName))
-           # }
-          
+            matS<-data.frame(matrix(cbind(Err[1,,m],yVarX[1,,m],timeX[1,,m],hoursX[1,,m],sPtsX[1,,m],format(sumN[y,1:Progression_end],nsmall=PRdigits),format(sumLow[y,1:Progression_end],nsmall=PRdigits),format(sumHi[y,1:Progression_end],nsmall=PRdigits),format(sumMean[y,1:Progression_end],nsmall=PRdigits),format(sumMedian[y,1:Progression_end],nsmall=PRdigits),format(sumMode[y,1:Progression_end],nsmall=PRdigits),format(sumT[y,1:Progression_end],nsmall=PRdigits),format(sumSD[y,1:Progression_end],digits=4,nsmall=PRdigits)),ncol=13))  #,dimnames=list(row_names,colName))
+
           names(matS)<-c("Err","Y","Time Pts","hours from RefDateTime","#Pts","N","Low","High","Mean","Median","Mode","dT","s.d.") # format column names
-          addTable(rtf,matS,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.6,.3,1.3,1.05,1.4,.6,.6,.6,.75,.75,.6,.75,.75))
+          addTable(rtf,matS,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.75,.3,1.3,1.05,.85,.5,.6,.6,.75,.75,.5,.5,.5))
         }  # End Components = 1
         if (Progression_end>1){     #  if there is more than one Interval, print final row:  full data summary 
           # non progressive and progressive!  matS<-data.frame(matrix(cbind(Err,Y,paste(StartDate,"-",EndDate),format(MyData_hours,digits=PRdigits,nsmall=PRdigits),paste(StartIndex[1],"-",tail(EndIndex,1)),format(sumN,digits=PRdigits,nsmall=PRdigits),format(sumLow[,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumHi[,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMean[,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMedian[,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMode[,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumT[,1:Progression_end],nsmall=PRdigits),format(sumSD[,Progression_end+1],digits=PRdigits,nsmall=PRdigits)),ncol=13))
-          #matS<-data.frame(matrix(cbind(Err[y,1,m],yVarX[y,1,m],timeX[y,1,m],hoursX[y,1,m],sPtsX[y,1,m],format(sumN,nsmall=PRdigits),format(sumLow[y,1:Progression_end+1],nsmall=PRdigits),format(sumHi[y,1:Progression_end+1],nsmall=PRdigits),format(sumMean[y,1:Progression_end+1],nsmall=PRdigits),format(sumMedian[y,1:Progression_end+1],nsmall=PRdigits),format(sumMode[y,1:Progression_end+1],nsmall=PRdigits),format(sumT[y,1:Progression_end+1],nsmall=PRdigits),format(sumSD[y,1:Progression_end+1],nsmall=PRdigits)),ncol=13))  #,dimnames=list(row_names,colName))
-          matS<-data.frame(matrix(cbind("",Ycol,paste(StartDate,"-",EndDate),format(MyData_hours,digits=PRdigits,nsmall=PRdigits),paste(StartIndex[1],"-",tail(EndIndex,1)),format(sumN[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumLow[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumHi[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMean[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMedian[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMode[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumT[y,Progression_end+1],nsmall=PRdigits),format(sumSD[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits)),ncol=13))
+          matS<-data.frame(matrix(cbind("",printYlab,paste(StartDate,"-",EndDate),format(MyData_hours,digits=PRdigits,nsmall=PRdigits),paste(StartIndex[1],"-",tail(EndIndex,1)),format(sumN[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumLow[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumHi[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMean[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMedian[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMode[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumT[y,Progression_end+1],nsmall=PRdigits),format(sumSD[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits)),ncol=13))     #not printYlab1[y]  10/6/2017
           names(matS)<-c("Err","Y","Total Time","Total Hours","Total Pts#","N","Low","High","Mean","Median","Mode","dT","s.d.")
-          addTable(rtf,matS,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.6,.3,1.3,1.05,1.4,.6,.6,.6,.75,.75,.6,.75,.75))
-        }
+          addTable(rtf,matS,font.size=11,row.names=FALSE,NA.string="--",col.widths=c(.75,.3,1.3,1.05,.85,.5,.6,.6,.75,.75,.5,.5,.5))
+        } 
       }     # end RTF
       #####################################################################################################
       #                                                                                                   #
@@ -1835,19 +2010,17 @@ Page<-0
           MagX<-array(data=Magnitude,c(i,j,m))
           BathyX<-array(data=Bathyphase,c(i,j,m))
           OrthoX<-array(data=Orthophase,c(i,j,m))
-          #LCM,format(multi_PR[i,n],digits=2*PRdigits,nsmall=PMAdigits,scientific=FALSE),printP_multi
-          #"       Magnitude=",Magnitude[i,n],"        Orthophase",Orthophase[i,n],"        Bathyphase=",Bathyphase[i,n],"\n\n"))
-          #browser()
-          datMat<-cbind("R",Err,SubjectID[i],jLabel,yVarX,sub("\n",timeX,replacement="",fixed=TRUE),hoursX,sPtsX2,format(Cycle,nsmall=PRdigits),format(newPR,digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),printP,format(MX,digits=2*PRdigits,nsmall=PMAdigits),format(mesor_seX,digits=2*PRdigits,nsmall=PMAdigits),format(A,digits=2*PRdigits,nsmall=PMAdigits),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits),LCM,PRX,PX,MagX,OrthoX,BathyX)
-          datMatNames<-c("Hdr","Err","subject","section","Y","Time Pts","hours from RefDateTime","#Pts","Period in Hrs","PR","P","Mesor","Mesor SE","Amp","Amp SE","PHI","PHI SE","Total:  LCM","PR","P","Magnitude", "Orthophase","Bathyphase")
+
+          datMat<-cbind("R",Err,functionName,SubjectID[i],jLabel,yVarX,sub("\n",timeX,replacement="",fixed=TRUE),hoursX,sPtsX2,format(Cycle,nsmall=PRdigits),format(newPR,digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),printP,format(MX,digits=2*PRdigits,nsmall=PMAdigits),format(mesor_seX,digits=2*PRdigits,nsmall=PMAdigits),format(A,digits=2*PRdigits,nsmall=PMAdigits),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits),LCM,PRX,PX,MagX,OrthoX,BathyX)
+          datMatNames<-c("Hdr","Err","Fn","subject","section","Y","Time Pts","hours from RefDateTime","#Pts","Period in Hrs","PR","P","Mesor","Mesor SE","Amp","Amp SE","PHI","PHI SE","Total:  LCM","PR","P","Magnitude", "Orthophase","Bathyphase")
         } else{
-          datMat<-cbind("R",Err,SubjectID[i],jLabel,yVarX,sub("\n",timeX,replacement="",fixed=TRUE),hoursX,sPtsX2,format(Cycle,nsmall=PRdigits),format(newPR,digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),printP,format(MX,digits=2*PRdigits,nsmall=PMAdigits),format(mesor_seX,digits=2*PRdigits,nsmall=PMAdigits),format(A,digits=2*PRdigits,nsmall=PMAdigits),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits))
-          datMatNames<-c("Hdr","Err","subject","section","Y","Time Pts","hours from RefDateTime","#Pts","Period in Hrs","PR","P","Mesor","Mesor SE","Amp","Amp SE","PHI","PHI SE")
+          datMat<-cbind("R",Err,functionName,SubjectID,jLabel,yVarX,sub("\n",timeX,replacement="",fixed=TRUE),hoursX,sPtsX2,format(Cycle,nsmall=PRdigits),format(newPR,digits=2*PRdigits,nsmall=PRdigits,scientific=FALSE),printP,format(MX,digits=2*PRdigits,nsmall=PMAdigits),format(mesor_seX,digits=2*PRdigits,nsmall=PMAdigits),format(A,digits=2*PRdigits,nsmall=PMAdigits),format(amp_se,digits=2*PRdigits,nsmall=PMAdigits),format(PHI,digits=2*PHIdigits,nsmall=PHIdigits,scientific=FALSE),format(phi_se,digits=2*PHIdigits,nsmall=PHIdigits))
+          datMatNames<-c("Hdr","Err","Fn","subject","section","Y","Time Pts","hours from RefDateTime","#Pts","Period in Hrs","PR","P","Mesor","Mesor SE","Amp","Amp SE","PHI","PHI SE")
         }
     
         # Needs to have [y,,x]    call12rhcsingle.R   --  added 1 to first 5 for Yoshiko/callYW8714.R
-        datMatS<-cbind("S",Err[1,,m],SubjectID[i],jLabel,yVarX[1,,m],sub("\n",timeX[1,,m],replacement="",fixed=TRUE),hoursX[1,,m],sPtsX2[1,,m],format(sumN[y,1:Progression_end],nsmall=PRdigits),format(sumLow[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumHi[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumMean[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumMedian[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumMode[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumT[y,1:Progression_end],nsmall=PRdigits),format(sumSD[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits))
-        datMatNamesS<-c("Hdr","Err","subject","section","Y","Time Pts","hours from RefDateTime","#Pts","N","Low","High","Mean","Median","Mode","dT","SD")
+        datMatS<-cbind("S",Err[1,,m],functionName,SubjectID[i],jLabel,yVarX[1,,m],sub("\n",timeX[1,,m],replacement="",fixed=TRUE),hoursX[1,,m],sPtsX2[1,,m],format(sumN[y,1:Progression_end],nsmall=PRdigits),format(sumLow[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumHi[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumMean[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumMedian[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumMode[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits),format(sumT[y,1:Progression_end],nsmall=PRdigits),format(sumSD[y,1:Progression_end],digits=PRdigits,nsmall=PRdigits))
+        datMatNamesS<-c("Hdr","Err","Fn","subject","section","Y","Time Pts","hours from RefDateTime","#Pts","N","Low","High","Mean","Median","Mode","dT","SD")
         dimnames(datMat)<-NULL
         dimnames(datMatS)<-NULL
         #eol = "\r\n" will produce Windows' line endings on a Unix-alike OS, and eol = "\r" will produce files as expected by Excel:mac 2004.
@@ -1862,18 +2035,18 @@ Page<-0
         write.table(datMatS,file=fileoutCosX,append=TRUE,quote=FALSE,sep="\t",row.names=FALSE,col.names=datMatNamesS)
         if (Progression_end>1){     #  if there is more than one Interval, print full data summary  
           # (chgned from Y to Ycol when progressive, multi-period, multi-y, single comp)
-          datMatS<-cbind("STot","",SubjectID[i],"",Ycol,paste(StartDate,"-",EndDate),format(MyData_hours,digits=PRdigits,nsmall=PRdigits),paste(StartIndex[1],"-",tail(EndIndex,1)),format(sumN[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumLow[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumHi[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMean[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMedian[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMode[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumT[y,Progression_end+1],nsmall=PRdigits),format(sumSD[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),"\n")
-          datMatNamesS<-c("Hdr"," ","subject"," ","Y","Total Time","Total Hours","Total Pts#","N","Low","High","Mean","Median","Mode","dT","SD"," ")
+          datMatS<-cbind("STot","",functionName,SubjectID[i],"",printYlab,paste(StartDate,"-",EndDate),format(MyData_hours,digits=PRdigits,nsmall=PRdigits),paste(StartIndex[1],"-",tail(EndIndex,1)),format(sumN[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumLow[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumHi[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMean[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMedian[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumMode[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),format(sumT[y,Progression_end+1],nsmall=PRdigits),format(sumSD[y,Progression_end+1],digits=PRdigits,nsmall=PRdigits),"\n")      #not printYlab1[y]  10/6/2017
+          datMatNamesS<-c("Hdr"," ","Fn","subject"," ","Y","Total Time","Total Hours","Total Pts#","N","Low","High","Mean","Median","Mode","dT","SD"," ")
           dimnames(datMatS)<-NULL
 
           write.table(datMatS,file=fileoutCosX,append=TRUE,quote=FALSE,sep="\t",row.names=FALSE,col.names=datMatNamesS)
-         }
-        
+        } 
       }   # end Dat
-      # } 
     }   # end RTF or Dat
 
     if (Output$Doc){
+      
+      #  separation
       addNewLine(rtf,4)
       if (y==Ys_end && j==Progression_end){
         keyMsgsX<-as.data.frame(keyMsgs)
@@ -1885,6 +2058,7 @@ Page<-0
       } else {
         Err <- array(data="",c(RowCnt, Progression_end,Components))
       }
+      
       done(rtf)                    # writes and closes the file
     }
   }    #    END for (y in 1:Ys_end){

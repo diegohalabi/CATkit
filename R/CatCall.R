@@ -1,5 +1,5 @@
 CatCall <-
-function (TimeCol=1, timeFormat="%Y%m%d%H%M",lum=4, valCols=c(3,4), sumCols=c(5,6), Avg=FALSE, export=FALSE, sizePts=2, binPts=5, Span = 0, Increment=0, k=6, yLab="Activity Level (au)", modulo=1440,Rverbose=0, RmaxGap=400, Skip=0,header=FALSE, Smoothing=FALSE, Actogram=FALSE,AutoCorr=FALSE,CrossCorr=FALSE,Console=FALSE,Graphics="pdf", Darkness=1,LagPcnt=.33,tz="GMT",fileName,file2=list(Name=NULL,TimeCol=1, timeFormat="%Y%m%d%H%M", lum=4, valCols=c(3,4), sumCols=c(5,6),sizePts=2, binPts=5,Darkness=0)) {   #  ,Multitaper=F
+function (TimeCol=1, timeFormat="%Y%m%d%H%M",lum=4, valCols=c(3,4), sumCols=c(5,6), Avg=FALSE, export=FALSE, sizePts=2, binPts=5, Interval = 0, Increment=0, k=6, yLab="Activity Level (au)", modulo=1440,Rverbose=0, RmaxGap=400, Skip=0,header=FALSE, Smoothing=FALSE, Actogram=FALSE,AutoCorr=FALSE,CrossCorr=FALSE,Console=FALSE,Graphics="pdf", Darkness=1,LagPcnt=.33,tz="GMT",fileName,file2=list(Name=NULL,TimeCol=1, timeFormat="%Y%m%d%H%M", lum=4, valCols=c(3,4), sumCols=c(5,6),sizePts=2, binPts=5,Darkness=0)) {   #  ,Multitaper=F
   # at this point, lum works for both files, file2$lum is not yet working
   #          also, the periodogram turns out with highest precision if a multiple of a full period is used.
   #tz accepts any time zone to apply to data read.  GMT is the default, and most reliable usage.  There is usually no need to change it. 
@@ -28,12 +28,12 @@ function (TimeCol=1, timeFormat="%Y%m%d%H%M",lum=4, valCols=c(3,4), sumCols=c(5,
   #      Binning is very flexible since it can be so important.  sizePts * binPts = number of minutes in each bin.   Only full bins are 
   #     used for analysis, so there could be a few data points at the end of the data (after binEnd) that are not used.
   
-  #Span, Increment:  These two parameters are used together to specify a progressive analysis.  The span is the length of subsections of
-  #     data to analyze, and the increment is how far to move ahead in the data to begin the next span.  The entire data set will 
+  #Interval, Increment:  These two parameters are used together to specify a progressive analysis.  The Interval is the length of subsections of
+  #     data to analyze, and the increment is how far to move ahead in the data to begin the next Interval.  The entire data set will 
   #     be analyzed (from LumStart to binEnd).   A progressive analysis, as indicated by Table 2, is performed by the Auto-Correlation, 
   #     Cross-Correlation and Multitaper/Periodogram analyses.  The Actogram and Smoothing functions are performed on the full dataset 
   #     length, for each column, as normal.  There is no benefit to viewing these graphs in subsections.
-  #     Span will need to be large enough not to trigger the error messages in the functions, which require more than 3 days for each analysis
+  #     Interval will need to be large enough not to trigger the error messages in the functions, which require more than 3 days for each analysis
   
   #k:  Only the Smoothing function uses this parameter.  It is a count of the number of data points on each side of a point to 
   #        include in the moving average.  Each moving average is calculated using 2k data points.
@@ -291,7 +291,12 @@ if (is.na(myData1[2,TimeCol])){
               tiff(filename=fileName4,width=8, height=10)                #,width=8, height=10)
               fileName4 <-paste(fileName,thisTime,"CAToutput.tif",sep="")
             }} 
-  } }}
+        } }}
+  
+  percentMissing<-myList$percentMissing
+  percentMissing2<-NA
+  maxGap<-myList$maxGap
+  maxGap2<-NA
   if (export==T){
     file1out<-paste(fileName,thisTime,"CATfile1binned.txt",sep="")
     file2out<-""
@@ -301,10 +306,6 @@ if (is.na(myData1[2,TimeCol])){
     file2outCorr<-""
     #file1outXcorr<-paste(fileName,thisTime,"CATfile1-fXcorr.txt",sep="")   # XCorr is not run if only one file
     fileoutXcorr<-""
-    percentMissing<-myList$percentMissing
-    percentMissing2<-NA
-    maxGap<-myList$maxGap
-    maxGap2<-NA
     if (nFiles==2){
       file2out<-paste(fileName,thisTime,"CATfile2binned.txt",sep="")
       file2outSmooth<-paste(fileName,thisTime,"CATfile2-fSmooth.txt",sep="")
@@ -317,15 +318,15 @@ if (is.na(myData1[2,TimeCol])){
           file2out<-file2outSmooth<-file2outCorr<-fileoutXcorr<-""
   }
 
-CatCover(TimeCol=TimeColParam, TimeFormat=timeFormat, valCols=valColsParam, sumCols=sumColsParam, lum=lumParam, Avg=Avg, export=export, percentMissing=c(percentMissing, percentMissing2),  maxGap<-c(maxGap,maxGap2), sizePts=sizePts, binPts=binPts, Span = Span, Increment=Increment, k=k, yLab=yLab, modulo=modulo,header=header, Rverbose=Rverbose, RmaxGap=RmaxGap, tz=tz,Skip=Skip,nFiles=nFiles, Smoothing=Smoothing, Actogram=Actogram,AutoCorr=AutoCorr,CrossCorr=CrossCorr,Console=Console,Graphics=Graphics,Darkness1=Darkness,Darkness2=file2$Darkness,LagPcnt=LagPcnt,File1=fileName,File2=file2$Name,File1out=file1out,File2out=file2out)   # Multitaper=Multitaper,
+CatCover(TimeCol=TimeColParam, TimeFormat=timeFormat, valCols=valColsParam, sumCols=sumColsParam, lum=lumParam, Avg=Avg, export=export, percentMissing=c(percentMissing, percentMissing2),  maxGap<-c(maxGap,maxGap2), sizePts=sizePts, binPts=binPts, Span = Interval, Increment=Increment, k=k, yLab=yLab, modulo=modulo,header=header, Rverbose=Rverbose, RmaxGap=RmaxGap, tz=tz,Skip=Skip,nFiles=nFiles, Smoothing=Smoothing, Actogram=Actogram,AutoCorr=AutoCorr,CrossCorr=CrossCorr,Console=Console,Graphics=Graphics,Darkness1=Darkness,Darkness2=file2$Darkness,LagPcnt=LagPcnt,File1=fileName,File2=file2$Name,File1out=file1out,File2out=file2out)   # Multitaper=Multitaper,
   print("output fileName4")
   print(fileName4)
-browser
+
   if (FALSE) {  
   print("cosinor path") 
   #CosinorEQ(startX, endX, Avg=0, lum, sizePts, binPts, period=24, myData = baseData,fileName1)
-  #Cosinor(TimeCol=2,Y=c(startX,endX), Units='Week', RegressionLen=1, RefDate="201302030000", SpanUnits='Day', Span=Span, Increment=Increment, header=F,oneCycle=0, Debug=FALSE,call=TRUE,data=MyData1,file=fileName1)
-  #Cosinor(TimeCol=2,Y=c(startX,endX), Units='Week', RegressionLen=1, RefDate="201302030000", SpanUnits='Day', Span=Span, Increment=Increment, header=F,oneCycle=0, Debug=FALSE,call=TRUE,data=MyData,file=file2Name1)  
+  #Cosinor(TimeCol=2,Y=c(startX,endX), Units='Week', RegressionLen=1, RefDate="201302030000", IntervalUnits='Day', Span=Interval, Increment=Increment, header=F,oneCycle=0, Debug=FALSE,call=TRUE,data=MyData1,file=fileName1)
+  #Cosinor(TimeCol=2,Y=c(startX,endX), Units='Week', RegressionLen=1, RefDate="201302030000", IntervalUnits='Day', Span=Interval, Increment=Increment, header=F,oneCycle=0, Debug=FALSE,call=TRUE,data=MyData,file=file2Name1)  
   } else{
   baseData_len<-length(baseData[,1])         # #####################################
   endX<-length(baseData[1,])
@@ -394,8 +395,9 @@ browser
     cat("darkness2",startDataX,"\n")
   }
 #browser()
+  CatBins1<-CatBin(TimeCol=TimeCol, startX, endX, Avg=0, lum, sizePts, binPts,modulo, startData,baseData)
+  
   if (export==T){
-    CatBins1<-CatBin(TimeCol=TimeCol, startX, endX, Avg=0, lum, sizePts, binPts,modulo, startData,baseData)
     # returns newMinPerBin,dataPts,binsPerDay,animals, startData, endData, DataList,plotCnt
     #write.matrix(cbind(CatBins1$TimeBins,t(CatBins1$DataList)), file = file1out, sep = delim1)  #  no headers
     backup1<-baseData
@@ -434,36 +436,36 @@ browser
   Others<-TRUE
   if (Others){
 
-    if (Span<=0 || Increment<=0 || Increment*(1440/sizePts)>=baseData_len){
+    if (Interval<=0 || Increment<=0 || Increment*(1440/sizePts)>=baseData_len){
       baseIncrement<-0
-      baseSpan<-baseData_len
-      StartSpans<-seq(from=startData, to=baseData_len, by=baseData_len)
+      baseInterval<-baseData_len
+      StartIntervals<-seq(from=startData, to=baseData_len, by=baseData_len)
     }
     else {
-      # Span or increment units are assumed to be in Days  X  
-      baseSpan<-Span*(1440/sizePts)      # #days  X  data points per day  (minutes in a day/ length between pts)  
+      # Interval or increment units are assumed to be in Days  X  
+      baseInterval<-Interval*(1440/sizePts)      # #days  X  data points per day  (minutes in a day/ length between pts)  
       baseIncrement<-Increment*(1440/sizePts)      # #days  X  new bins per day
-      StartSpans<-seq(from=startData, to=(baseData_len-(baseIncrement-1)), by=baseIncrement)    #to=(baseData_len-(baseIncrement-1))
+      StartIntervals<-seq(from=startData, to=(baseData_len-(baseIncrement-1)), by=baseIncrement)    #to=(baseData_len-(baseIncrement-1))
     }
-    cat("Span",baseSpan,"Increment",baseIncrement,"StartSpans",StartSpans,"baseData_len",baseData_len,"\n")
-    baseProgression_end<-length(StartSpans)
+    cat("Interval",baseInterval,"Increment",baseIncrement,"StartIntervals",StartIntervals,"baseData_len",baseData_len,"\n")
+    baseProgression_end<-length(StartIntervals)
     
     #  move baseline autocorrelation and baseline multitaper to here    #######################################
     #browser()
     if (nFiles==2){
       
-      if (Span<=0 || Increment<=0 || Increment*(1440/file2$sizePts)>=xData_len){
+      if (Interval<=0 || Increment<=0 || Increment*(1440/file2$sizePts)>=xData_len){
         xIncrement<-0
-        xSpan<-xData_len
-        xStartSpans<-seq(from=startDataX, to=xData_len, by=xData_len)
+        xInterval<-xData_len
+        xStartIntervals<-seq(from=startDataX, to=xData_len, by=xData_len)
       } else {
-        # Span or increment units are assumed to be in Days  X  
-        xSpan<-Span*(1440/file2$sizePts)      # #days  X  data points per day  (minutes in a day/ length between pts)  
+        # Interval or increment units are assumed to be in Days  X  
+        xInterval<-Interval*(1440/file2$sizePts)      # #days  X  data points per day  (minutes in a day/ length between pts)  
         xIncrement<-Increment*(1440/file2$sizePts)      # #days  X  new bins per day
-        xStartSpans<-seq(from=startDataX, to=xData_len-(xIncrement-1), by=xIncrement)     # to=xData_len-(xIncrement-1)
+        xStartIntervals<-seq(from=startDataX, to=xData_len-(xIncrement-1), by=xIncrement)     # to=xData_len-(xIncrement-1)
       }
-      cat("xSpan",xSpan,"xIncrement",xIncrement,"xStartSpans",xStartSpans,"xData_len",xData_len)
-      xProgression_end<-length(xStartSpans)
+      cat("xInterval",xInterval,"xIncrement",xIncrement,"xStartIntervals",xStartIntervals,"xData_len",xData_len)
+      xProgression_end<-length(xStartIntervals)
    } else {xProgression_end<-0}
   
     if (xProgression_end>=baseProgression_end){
@@ -478,9 +480,9 @@ browser
 
       if (xProgression_end>=j){
         xSkip<-FALSE
-        xEndSpan<-xStartSpans[j]+xSpan -1      #   Add span length to the last span to get the ending of the span
-        if (xEndSpan>xData_len){      # *****what to do about this???**********
-          xEndSpan<-xData_len
+        xEndInterval<-xStartIntervals[j]+xInterval -1      #   Add Interval length to the last Interval to get the ending of the Interval
+        if (xEndInterval>xData_len){      # *****what to do about this???**********
+          xEndInterval<-xData_len
         }
       } else {                                 # if this increment is past end of Progression, skip
           xSkip <-TRUE
@@ -490,13 +492,13 @@ browser
         if (AutoCorr){
           print("AutoCorr")
           if (!baseSkip){
-            if (Avg) {AutoCorr(endX, Avg=1, lum, modulo=modulo, Rverbose=Rverbose, CatBins = CatBins1,fileName=fileName1,fileNum=1,Span = Span, Increment=Increment,LagPcnt=LagPcnt,export=export,fileoutCorr=file1outCorr)} 
-            AutoCorr(endX, Avg=0, lum, modulo=modulo, Rverbose=Rverbose,CatBins = CatBins1,fileName=fileName1,fileNum=1,Span = Span, Increment=Increment,LagPcnt=LagPcnt,export=export,fileoutCorr=file1outCorr)
-          #  AutoCorr(startX, endX, Avg=0, lum, sizePts, binPts,Rverbose=Rverbose,myData = baseData[startData:baseData_len,],fileName=fileName1,Span = Span, Increment=Increment,LagPcnt=LagPcnt,1,export,file1outCorr)
+            if (Avg) {AutoCorr(endX, Avg=1, lum, modulo=modulo, Rverbose=Rverbose, CatBins = CatBins1,fileName=fileName1,fileNum=1,Span = Interval, Increment=Increment,LagPcnt=LagPcnt,export=export,fileoutCorr=file1outCorr)} 
+            AutoCorr(endX, Avg=0, lum, modulo=modulo, Rverbose=Rverbose,CatBins = CatBins1,fileName=fileName1,fileNum=1,Span = Interval, Increment=Increment,LagPcnt=LagPcnt,export=export,fileoutCorr=file1outCorr)
+          #  AutoCorr(startX, endX, Avg=0, lum, sizePts, binPts,Rverbose=Rverbose,myData = baseData[startData:baseData_len,],fileName=fileName1,Span = Interval, Increment=Increment,LagPcnt=LagPcnt,1,export,file1outCorr)
           }
           if (!xSkip & nFiles==2){
-            if (Avg) {AutoCorr(endX2, Avg=1, lum, modulo=modulo, Rverbose=Rverbose,CatBins = CatBins2, fileName=file2Name1,fileNum=2,Span = Span, Increment=Increment,xStartSpans[j],xEndSpan,LagPcnt=LagPcnt,export=export,fileoutCorr=file2outCorr)} 
-            AutoCorr(endX2, Avg=0, lum, modulo=modulo, Rverbose=Rverbose,CatBins = CatBins2, fileName=file2Name1,fileNum=2,Span = Span, Increment=Increment,xStartSpans[j],xEndSpan,LagPcnt=LagPcnt,export=export,fileoutCorr=file2outCorr)
+            if (Avg) {AutoCorr(endX2, Avg=1, lum, modulo=modulo, Rverbose=Rverbose,CatBins = CatBins2, fileName=file2Name1,fileNum=2,Span = Interval, Increment=Increment,xStartIntervals[j],xEndInterval,LagPcnt=LagPcnt,export=export,fileoutCorr=file2outCorr)} 
+            AutoCorr(endX2, Avg=0, lum, modulo=modulo, Rverbose=Rverbose,CatBins = CatBins2, fileName=file2Name1,fileNum=2,Span = Interval, Increment=Increment,xStartIntervals[j],xEndInterval,LagPcnt=LagPcnt,export=export,fileoutCorr=file2outCorr)
           }  
         }  #end AutoCorr
         if (CrossCorr){
@@ -506,27 +508,27 @@ browser
             #browser()
             #  have to pass in start of baseline relative to dark (or phase is off!)  -- test with progressive?           Only 1 output file!
             #  endX2 is not needed, as both files must have the same number of columns  -- xcorr is done col-by-col
-            if (Avg) {CrossCorr(endX, Avg=1, lum, modulo=modulo, LagPcnt=LagPcnt,Rverbose=Rverbose,CatBins1 = CatBins1,CatBins2 = CatBins2,file2Name1,Span = Span, Increment=Increment,xStartSpans[j],xEndSpan,export=export,fileoutXcorr=fileoutXcorr)}
-            CrossCorr(endX, Avg=0, lum, modulo=modulo, LagPcnt=LagPcnt,Rverbose=Rverbose,CatBins1 = CatBins1,CatBins2 = CatBins2,file2Name1,Span = Span, Increment=Increment,xStartSpans[j],xEndSpan,export=export,fileoutXcorr=fileoutXcorr)
+            if (Avg) {CrossCorr(endX, Avg=1, lum, modulo=modulo, LagPcnt=LagPcnt,Rverbose=Rverbose,CatBins1 = CatBins1,CatBins2 = CatBins2,file2Name1,Span = Interval, Increment=Increment,xStartIntervals[j],xEndInterval,export=export,fileoutXcorr=fileoutXcorr)}
+            CrossCorr(endX, Avg=0, lum, modulo=modulo, LagPcnt=LagPcnt,Rverbose=Rverbose,CatBins1 = CatBins1,CatBins2 = CatBins2,file2Name1,Span = Interval, Increment=Increment,xStartIntervals[j],xEndInterval,export=export,fileoutXcorr=fileoutXcorr)
           }
         }   # end CrossCorr
      }    #  end turning stuff off
 #       if (Multitaper==T){
 #         print("MultiTaper")
-#           #View(baseData[StartSpans[j]:EndSpan,1])
-#         print(format(baseData[StartSpans[j],1], "%b %d, %Y - %H:%M:%S"))
-#         #print(format(baseData[EndSpan,1], "%b %d, %Y - %H:%M:%S"))
+#           #View(baseData[StartIntervals[j]:EndInterval,1])
+#         print(format(baseData[StartIntervals[j],1], "%b %d, %Y - %H:%M:%S"))
+#         #print(format(baseData[EndInterval,1], "%b %d, %Y - %H:%M:%S"))
 #         if (!xSkip){
-#           print(format(xData[xStartSpans[j],1], "%b %d, %Y - %H:%M:%S"))
-#           print(format(xData[xEndSpan,1], "%b %d, %Y - %H:%M:%S"))
+#           print(format(xData[xStartIntervals[j],1], "%b %d, %Y - %H:%M:%S"))
+#           print(format(xData[xEndInterval,1], "%b %d, %Y - %H:%M:%S"))
 #        }
 #         if (!baseSkip){
-#           if (Avg) {MultiTaper.v4(TimeCol=TimeCol, startX, endX, Avg=1, lum=lum, sizePts, binPts,modulo=modulo, Rverbose=Rverbose,export=export,myData = baseData[startData:baseData_len,],fileName1,Span = Span, Increment=Increment )}
-#           MultiTaper.v4(TimeCol=TimeCol, startX, endX, Avg=0, lum-lum, sizePts, binPts,modulo=modulo, Rverbose=Rverbose,export=export,myData = baseData[startData:baseData_len,],fileName1,Span = Span, Increment=Increment)
+#           if (Avg) {MultiTaper.v4(TimeCol=TimeCol, startX, endX, Avg=1, lum=lum, sizePts, binPts,modulo=modulo, Rverbose=Rverbose,export=export,myData = baseData[startData:baseData_len,],fileName1,Span = Interval, Increment=Increment )}
+#           MultiTaper.v4(TimeCol=TimeCol, startX, endX, Avg=0, lum-lum, sizePts, binPts,modulo=modulo, Rverbose=Rverbose,export=export,myData = baseData[startData:baseData_len,],fileName1,Span = Interval, Increment=Increment)
 #         }
 #         if (!xSkip & nFiles==2){
-#           if (Avg) {MultiTaper.v4(TimeCol=TimeCol, startX, endX, Avg=1, lum=lum, sizePts, binPts,modulo=modulo, export=export,Rverbose=Rverbose,myData = xData[xStartSpans[j]:xEndSpan,],file2Name1,Span = Span, Increment=Increment)}
-#           MultiTaper.v4(TimeCol=TimeCol, startX, endX, Avg=0, lum=lum, sizePts, binPts,modulo=modulo, export=export,Rverbose=Rverbose,myData = xData[xStartSpans[j]:xEndSpan,],file2Name1,Span = Span, Increment=Increment)
+#           if (Avg) {MultiTaper.v4(TimeCol=TimeCol, startX, endX, Avg=1, lum=lum, sizePts, binPts,modulo=modulo, export=export,Rverbose=Rverbose,myData = xData[xStartIntervals[j]:xEndInterval,],file2Name1,Span = Interval, Increment=Increment)}
+#           MultiTaper.v4(TimeCol=TimeCol, startX, endX, Avg=0, lum=lum, sizePts, binPts,modulo=modulo, export=export,Rverbose=Rverbose,myData = xData[xStartIntervals[j]:xEndInterval,],file2Name1,Span = Interval, Increment=Increment)
 #         }
 #       }
       }   #   end progressive
