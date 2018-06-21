@@ -180,6 +180,7 @@ if (!exists("GraphSet")){
               #stop(errMsg)
              #}
   #} 
+  
   errMsg<-""            #   this error message gets printed at the beginning of the rtf output file
   #  symbols currently in use for Err values, printed in the matrix
   errKey<-c("*","**","+","++","@","*@","@@@","@@","*@@","*@@@")   
@@ -302,6 +303,11 @@ if (!exists("GraphSet")){
     }
   }
 
+  if (length(MyDataReada[1,])<max(Y) ){
+    errMsg<-paste("Error:  The parameter specified for Y is greater than the number of columns in the file\ngreatest Y=",max(Y),"; # columns in file=",length(MyDataReada[1,]))
+    stop(errMsg)
+  }
+  
   if (IDcol=="fileName"){    #set once here as fileName if parameter indicates to use the file
     SubjectID<-fileName6
   } else {
@@ -578,11 +584,13 @@ if (!exists("GraphSet")){
   
   par(mar=c(4,4,1,1)) # set up margins
   
+  ###########################################################################################################
   #  #####    note on indexes and variables:  one set tracks through the ACTUAL times and data points:  #####
-  #                EndIdx, StartIdx, thisIdxCnt, MyData_length, TimeIdx
-  #  #####    another set tracks through the periods, in hours, being calculated:       ######
+  #                EndIdx, StartIdx, thisIdxCnt, MyData_length, TimeIdx                                 #####
+  #  #####    another set tracks through the periods, in hours, being calculated:                       #####
   #                MyData_hours; StartSpans, Interval, Increment, Progression_end, StartTime, StartSpanTime, EndTime
-  #  #####    These two must, of course, align. See:   TimeIdx<-which(StartSpanTime <= MyData$time.hour) 
+  #  #####    These two must, of course, align. See:   TimeIdx<-which(StartSpanTime <= MyData$time.hour)#####
+  ###########################################################################################################
   EndIdx<-0
   
   if (Interval > MyData_hours){    #  warn if interval chosen is longer than data
@@ -711,7 +719,8 @@ if (!exists("GraphSet")){
     } else {
       MyData<-MyDataRead[,c(TimeCol,Y[y], (nCol-2):nCol )]        # yloop   c(TimeCol,Y)
     }   #  from here on, TimeCol=1 and data is in column 2
-    missingData<-(length(MyDataRead[,TimeCol])-length(MyData[,TimeCol]))/length(MyDataRead[,TimeCol])    #  rowsData<-length(MyDataRead[,1])
+    #browser()
+    missingData<-(length(MyDataRead[,TimeCol])-length(MyData[,1]))/length(MyDataRead[,TimeCol])    #  rowsData<-length(MyDataRead[,1]);   column=1 is TimeCol in MyData 2/16/18
     TimeCol<-1
     
     #  recalculate EndIndex after removing data:  Added 11/1/2017 because missing calc was moved here
@@ -950,7 +959,14 @@ newData<- matrix(data=NA,nrow=RowCnt, ncol=Progression_end)    # holds filtered 
 
 Page<-0
       for (j in 1:Progression_end){   #  make a vector with incremental values.  use var(i) for necessary indexes
-      # from:to  browser()
+
+        #####################################################################################################
+        #                                                                                                   #
+        #        PDF file output:  This section sets up variables and formatting for the output to the      #
+        #                PDF file. The first row is different than the others.                              #
+        #                                                                                                   #
+        #####################################################################################################
+        
         if ((j %in% c(1,13,29,45,61,77,93,109,125,141,157,173,189)) || (oneCycle[1]>0 && Progression_end!=1)){    #  new page or (prog & not LSS)      
           Page<-Page+1
           #browser()
@@ -1011,7 +1027,18 @@ Page<-0
           abline(h=hdrRow-.3)    
           #page footer
           }
-      
+        
+        #####################################################################################################
+        #                                                                                                   #
+        #        Progressive variables:  calculates start and end points for each interval of a progressive #
+        #               StartSpanTime/EndSpanTime:  Time value of start and end of the span                 #
+        #               TimeIdx:  an array having the indexes of time values between StartSpanTime  and     #
+        #                                EndSpanTime                                                        #
+        #               StartIdx/EndIdx:  Indexes of the start and end of the span                          #
+        #               thisIdxCnt:  the count of points in this interval;  used for S11 and SigmaHat       #                                                                             #
+        #                                                                                                   #
+        #####################################################################################################
+        
           max3Amp<-max2Amp<-maxAmp<-1
           StartSpanTime<-StartTime+StartSpans[j]    # Feb 2014 added back in; 11/4  StartTime+StartSpans[j]-1 # 10/18 added StartTime+ DH;  9/30  MyData$time.hour[1]+StartSpans[j]-1
           EndSpanTime<-StartSpanTime +Interval          # 6/14 no subtraction; 5/2014 subtract 1 oneSec instead; 9/30  -1***adj to match gc  Add Interval length to the last Interval StartSpans[j]+Interval to get the ending of the Interval
@@ -1023,7 +1050,7 @@ Page<-0
            if (EndSpanTime>MyData_hours+StartTime){   # Feb 2014 had to add + StartTime to these 2 lines
             EndSpanTime<-MyData_hours+StartTime
           }
-#browser()
+
           if (Progression_end==j){                  #  6/14   last (or only) spans need to be treated differently than all others
             # needed to round because equal numbers didn't compare as equal due to differing precisions  (116.5333333 <> 116.5333)
             TimeIdx<-which(round(EndSpanTime,digits=10) >= round(MyData$time.hour,digits=10))   #  should be gte;  get indices UP TO the end of this Interval
@@ -1033,8 +1060,19 @@ Page<-0
           Interval_hours<-EndSpanTime-StartSpanTime
 
           thisIdxCnt<-EndIdx-StartIdx+1   # data points in this Interval  -- used for S11, and SigmaHat
+          
+          #####################################################################################################
+          #                                                                                                   #
+          #        Sets up looping variables:  Loops, Cycles                                                  #
+          #               1 component, spectrum of periods:  Loops<-RowCnt                                    #
+          #               1 component, not a spectrum of periods:   Loops<- once for each period selected     #
+          #                                EndSpanTime                                                        #
+          #               > 1 component:  Loops<-1  (no LSS for multi-components; multi-periods are components)#                                                                             #
+          #                                                                                                   #
+          #####################################################################################################
+          
           Loops<-RowCnt          
-          if (Components==1 && oneCycle[1] > 0){              #  a specified period in oneCycle overrides spectrum calculation  (and Period$Start/End?)
+          if (Components==1 && oneCycle[1] > 0){        #  a specified period in oneCycle overrides spectrum calculation  (and Period$Start/End?)
             Cycles<-oneCycle
             Loops<-length(Cycles)        
           } else if (Components>1){
@@ -1044,6 +1082,14 @@ Page<-0
         if (Debug){
           cat("StSpan ",StartSpans[j]," Interval ",Interval," EndDate ",EndDate," StrtIdx ",StartIdx, " EndIdx ",EndIdx," thisIdxCnt ",thisIdxCnt," j ",j,"\n")
         }
+          
+          #####################################################################################################
+          #                                                                                                   #
+          #        CatWindow:  bring back modified data with a selected window filter applied                 #
+          #               calculate summary statistics on the filtered data                                   #                                                                             #
+          #                                                                                                   #
+          #####################################################################################################
+          
         if (window != "noTaper"){          # calculates a window for the Interval
           # pass exact interval-1!!!!
           CatWindowList<-CatWindow(window=window,myData=MyData[StartIdx:EndIdx,Ycol],Time=MyData$time.hour[StartIdx:EndIdx],dataN=Interval_hours,Start=StartSpanTime, debug=Debug)
@@ -1072,6 +1118,14 @@ Page<-0
         # } else {sumMode[y,j]<-dTtest   #  ????way to find dt for non-equidistant data
         #}
 
+        #####################################################################################################
+        #                                                                                                   #
+        #        Loop:  this is the major loop of CATkit                                                    #
+        #               Calculate model, MSS, RSS, TSS;  Phi, MESOR, Amplitude, F, P, PR, and se's          #
+        #               loop through each component (within this loop)                                      #                                                                             #
+        #                                                                                                   #
+        #####################################################################################################
+        
           for (i in 1:Loops){
             # fit sinusoidal model
             if (oneCycle[1]==0){                  #  if a period has been specified, use present cycle
@@ -1086,7 +1140,14 @@ Page<-0
                   SubjectID[i]<-MyData[StartIdx,IDcol]     #  set for each Loop
                 }
             }
-
+              
+           #####################################################################################################
+           #                                                                                                   #
+           #        Arrays:  Set up arrays to save information for later                                       #
+           #               Most of it is used for printing                                                     #                                                                            #
+           #                                                                                                   #
+           #####################################################################################################
+              
             Cycle[i,j,1]<-cycle                    # store for later 
             yVar[i,j]<-names(MyData)[Ycol]    #yloop change to Ycol
             hours[i,j] <- paste(format(StartSpanTime,nsmall=1)," - ",format(EndSpanTime,nsmall=1),sep="")  # took :59 off because can be decimal hrs;  this shows ALL used
@@ -1096,13 +1157,22 @@ Page<-0
             sPts[i,j] <- paste(StartIdx,"-",EndIdx,"\n(",nPts[i,j],")")
 
             time[i,j] <- paste(MyData[StartIdx,TimeCol],"-\n",MyData[EndIdx,TimeCol])
+            
+            #####################################################################################################
+            #                                                                                                   #
+            #        Report error if there are not enough data points for the trial period being analyzed,      #
+            #               or if the period is too large for the time interval being analyzed                  # 
+            #                           (must be 90% of interval)                                               #   
+            #               If error, do not skip out of the loop.  Analyze this cycle and report with error    #
+            #                                                                                                   #
+            #####################################################################################################
+            
             if (nPts[i,j]<=minPtCnt) {        #  not enough data points for the trial period being analzyed.
               print(paste(keyMsgs[5],"C=",2*cycleCnt+1,"min pts=",minPtCnt))
               Err[i,j,]<-paste(Err[i,j,],errKey[5],"min pts=",minPtCnt)   # "@"
               #next   should not skip calculations  -- calculate as many as possible  jiii
             }
-            
-            #if (cycle>((MyData$time.hour[EndIdx]+dt)-MyData$time.hour[StartIdx])) {     #  data covers 90% of timeperiod < target period   (8-2-2016 added +dt for when "numeric" hours used -Garth)
+           
             if (cycle>Interval) {     #  data covers 90% of timeperiod < target period   (8-2-2016 Useing Interval because StartIdx and EndIdx are first and last, not always interval size when units=numeric)
               if ((.9*cycle)>(MyData$time.hour[EndIdx]-MyData$time.hour[StartIdx])) {    #  Error if much smaller than cycle
                 print(keyMsgs[7])
@@ -1113,7 +1183,16 @@ Page<-0
                 Err[i,j,]<-paste(Err[i,j,],":",errKey[8])   # "@@"
               }
             }
-
+            
+            #####################################################################################################
+            #                                                                                                   #
+            #        Matrix:  initialize variables and calculate matrix components; build matrix                #
+            #               Loop through once for each component in a multi-component model                     # 
+            #                           Note tracking of LCM, and calculation of dTime                          # 
+            #               Loop for vector multiplication to build matrix for cosine                           #
+            #                                                                                                   #
+            #####################################################################################################
+            
             # still need to check for gaps
             CosMatrix<-matrix(data=NA,nrow=CosMatrixDim, ncol=CosMatrixDim)
             testXmean<-matrix(data=NA,nrow=CosMatrixDim, ncol=Components)
@@ -1135,7 +1214,7 @@ Page<-0
                 # relative to RefTime, so start at 0
                 magDt<-(modelLen*dTime)              #  this is the #hours from RefTime of the last time
                 magTime<-seq(from=StartSpanTime,by=dTime,to=(StartSpanTime+(magDt-dTime)))       #  changed from 0 to magDt-dTime
-                #magTimeEnd<-RefTime + (magDt*3600) 
+
               }  # end oneCycle[1]>0
               if (Components>1){    #  if components >1, override value of cycle set above.
                 cycle<-Cycles[m]
@@ -1147,27 +1226,38 @@ Page<-0
               CosCoMatrix1[m*2+1,]<-sin(MyData$time.hour[StartIdx:EndIdx]*(2*pi)/cycle)   # z1 for  cycle m
               YMatrix[m*2] <- sum(newData%*%(cos(MyData$time.hour[StartIdx:EndIdx]*(2*pi)/cycle)))     # Y*x1
               YMatrix[m*2+1] <- sum(newData%*%(sin(MyData$time.hour[StartIdx:EndIdx]*(2*pi)/cycle)))   # Y*z1 
-            }
-
+            }  #  end for m in 1: Components
+            
             # vector multiplication to build matrix for cosine
             for (m in 1:CosMatrixDim){      #  columns
               for (o in 1:CosMatrixDim){    #  rows
                   CosMatrix[o,m]<-sum(CosCoMatrix1[m,] * CosCoMatrix1[o,])
               }
-            }
+            }    #   End for m in 1:CosMatrixDim
+            
+            #  fill in final array values
             CosMatrix[1,1]<-thisIdxCnt
             YMatrix[1] <- sum(newData)
-
-            mdat<-CosMatrix
-            mdat2<-YMatrix
-            #invert matrix to get the solution
+            
+            #####################################################################################################
+            #                                                                                                   #
+            #        Matrix: invert matrix (after checking for error conditions)                                #
+            #               multiply the inverted matrix by the dependent variable matrix in preparation        # 
+            #                  for calculating coef:  vector M, B, G, B2, G2, ...   (x=inv(S)b)                 # 
+            #                                                                                                   #
+            #####################################################################################################
+            
+            mdat<-CosMatrix     #  matrix (to be inverted)
+            mdat2<-YMatrix      #  dependent variable matrix
+            
+            #invert matrix to get the solution (after checking for error conditions)
             if (any(is.na(mdat))) {
-              Err[i,j,]<-paste(Err[i,j,],":",errKey[1])         # "*"     #  Err holds all error symbols for this element;  add this error
+              Err[i,j,]<-paste(Err[i,j,],":",errKey[1])         # "*"     #  Err[] holds all error symbols for this element;  add this error
               print(keyMsgs[1])
               next
             } else {
               if (det(mdat)<.00000000001){
-                Err[i,j,]<-paste(Err[i,j,],":",errKey[2])         # "**     #  Err holds all error symbols for this element;  add this error
+                Err[i,j,]<-paste(Err[i,j,],":",errKey[2])         # "**     #  Err[] holds all error symbols for this element;  add this error
                 print(keyMsgs[2])
                 #browser()
                 next
@@ -1191,6 +1281,15 @@ Page<-0
                 cat("matrix coefs ",coefs,"\n")
                 #browser()         #########   Great Debug location
             }
+            
+            #####################################################################################################
+            #                                                                                                   #
+            #        Coef:  calculate coefficients M, B, G, B2, G2, ...   (x=inv(S)b)  for each Component       #
+            #               multiply the inverted matrix by the dependent variable matrix to get                # 
+            #                  vector M, B, G, B2, G2, ...   (x=inv(S)b)                                        # 
+            #                                                                                                   #
+            #####################################################################################################
+            
             #calculate MESOR only once, regardless of # of components
             M[i,j]<-coefs[1]
             #calculate the Mean of Ys
@@ -1211,7 +1310,16 @@ Page<-0
                     if (Debug){
                       cat("A",A[i,j,m],"max",A[maxAmp,j,m],"m",m,"maxAmp",maxAmp,"\n")
                     }
-                    #preserve the index for the cycle with the maximum amplitude  
+                    
+                    #####################################################################################################
+                    #                                                                                                   #
+                    #        Max 3 Amplitudes:  preserves the index of the cycle with maximum amplitude.                #
+                    #               Collects the top three largest amplitudes to print in the PDF.                      #
+                    #                There is a possible issue when the first or second item is also the max.           #
+                    #                                                                                                   #
+                    #####################################################################################################
+                    
+                    
                     # if (is.na(A[maxAmp,j,m])){   #  removed 10/30/17 #this does not capture the maxAmp for multiple components properly
                     #   maxAmp<-i
                     #   } else 
@@ -1243,10 +1351,10 @@ Page<-0
                         multi_Model_mag = multi_Model_mag + coefs[beta]*cos(2*pi*magTime/Cycles[m]) + coefs[gamma]*sin(2*pi*magTime/Cycles[m])
                       }
 
-                     MYhat_Ymean<- Model_Y-MeanR     #   calculates MSS for single component model
+                     MYhat_Ymean<- Model_Y-MeanR       #   calculates MSS for single component model
                      MSS[m]<-sum(MYhat_Ymean^2)        #   calculates MSS for single component model
                       #  new PR 
-                    yTSS<-newData-MeanR       #  vector Y-Ybar for each Y
+                    yTSS<-newData-MeanR       #  vector Y-Ybar for each Y  (TSS=RSS+MS)
                     TSS_2<-sum((yTSS)^2)       #   sum of Y-Ybar^2
                     #beta1   *  sum[(Y-Ybar)x1]  * gamma1  *  sum[(Y-Ybar)z1] /TSS^2
                     #beta2   *  sum[(Y-Ybar)x2]  * gamma2  *  sum[(Y-Ybar)z2] /TSS^2  (one for each component)
@@ -1275,7 +1383,15 @@ Page<-0
                         next
                 }    #  end only-if coefs can be calculated
             }   # end coef calculation for each component
-
+            
+            #####################################################################################################
+            #                                                                                                   #
+            #        Model:  Use the full (data derived) model for calculations from here on                    #
+            #               Model_Y, MYhat_Ymean, multi_MSS, MY_Yhat, RSS, df1, df2, multi_F, multi_P, multi_PR # 
+            #                  Sigma_Hat, mesor_se                                                              # 
+            #                                                                                                   #
+            #####################################################################################################
+            
             # sum(Y-meanY)^2 = sum(Y - Yhat)^2 + sum(Yhat - meanY)^2
             if (Components>1){      # multiple components model 
                Model_Y <- multi_Model_Y       #  use the full (data derived) model for calculations from here on
@@ -1316,8 +1432,15 @@ Page<-0
               cat("bb ", thisIdxCnt," sHat ",SigmaHat,"PR\t",PR[i,j,m],"\tF\t",F[i,j,m],"\tP\t ",P[i,j,m],"\t ")
             }
             mesor_se[i,j] <-SigmaHat * mdatInv[1,1]^.5
-
-            #   for testing alternate formula for individual P
+            
+            #####################################################################################################
+            #                                                                                                   #
+            #        P:  for testing alternate formulas for single cosinor individual P                         #
+            #               Loop for all components                                                             #
+            #               non-correct alternates are commented out                                            #
+            #                                                                                                   #
+            #####################################################################################################
+            
             for (m in 1:Components){
               ## F[i,j,m]<-(MSS[m]/2)/(RSS/(df2))       #  df1 = 2, since MSS is for one component;  df2 is for full model
               ## P[i,j,m]<-1-pf(F[i,j,m],df1=2, df2=df2)              # Fisher-Snedecor (F ) (X2 )
@@ -1476,6 +1599,7 @@ Page<-0
             if (GraphSet$Model){     #  start Model plot
               # Plotted values use the StartSpans[j], which may include a FULL cycle span, not just the starting and ending data points
               # And also uses the start and end Ranges 
+
               dateRange<-paste("Data range: ",format(MyData$time[StartIdx],"%m/%d/%Y %H:%M")," to ",format(MyData$time[EndIdx],"%m/%d/%Y %H:%M"),"\nData analysis range: ",format(RefTime+plotStart,"%m/%d/%Y %H:%M")," to  ",format(RefTime+plotEnd,"%m/%d/%Y %H:%M"))
               if (Components>1 || cycleCnt==1){  
                 if ((realLCM*.99)<=LCM && LCM<=(realLCM*1.01)){
@@ -1513,7 +1637,7 @@ Page<-0
                 } 
                 y_range<-c(lo_range,hi_range)
                 x_range<-c(StartSpanTime,EndSpanTime) 
-                
+
                                  # xaxt="n",
                 plot(x=MyData$time.hour[StartIdx:EndIdx],newData,type="l", lwd=1, xlab=printXlab,ylim=y_range,xlim=x_range,ylab=printYlab,main=paste(plotTitle,deparse(Period$Set),dateRange),cex.lab=cexLab,cex.axis=cexAxis,cex.main=cexMain)   # xlim=c(1,modelLen)
                 
@@ -1806,7 +1930,7 @@ Page<-0
 
           layout(matrix(c(1:layoutSize), layoutSize, 1, byrow = TRUE), 
                  widths=c(1), heights=c(1,rep(2,layoutSize-2),1))          #   c(figure#1, figure#2), 2 row, 1 col, ...
- 
+
           #  j==1 in several cases:  >1 period single cosinor or multiple cosiner;  progressive;  range progressive
           #  perhaps spectrum could be line graph, and inc<1 could be bar graphs
           #  if Inc<1, this section may be dropped out per GCG:  should not graph these -- may show bar graphs of Amp only

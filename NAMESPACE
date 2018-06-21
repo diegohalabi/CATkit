@@ -2,7 +2,8 @@
 # importFrom(foo, f, g)  to get only the package
 export(CatCall)
 export(CATCosinor)
-export(pmc)
+export(CATpmc)
+export(CATparam)
 import(MASS)  
 import(rtf)
 import(png)
@@ -38,3 +39,5 @@ importFrom("stats", "TukeyHSD", "acf", "aov", "ccf", "coefficients",
 
 importFrom("utils", "read.table", "str", "tail", "write.table","read.delim2")
 import(signal)
+import(CombMSC)
+import(Hmisc)
