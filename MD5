@@ -1,8 +1,8 @@
-d5075b202000ef4430a906a690a8e7fc *DESCRIPTION
+dd8adc1b9e0776bb49cf5e2c4de89f72 *DESCRIPTION
 950605ae414453ea0fc811c4f8674e4c *NAMESPACE
 80f8025f8d20e132d4c2e23f896027f0 *R/Actogram.R
 a6173350f7a0f0adcd48b0013bfb816d *R/AutoCorr.R
-d50f18d9a59d5f341262d7e50a088d96 *R/CATCosinor.R
+6cbea3b83f6c02d48e5e250ad5f86b98 *R/CATCosinor.R
 d95f44e8160b60353c801a1fa61e5f7c *R/CATkit-internal.R
 bdb588d2ffe17b64f7d7c638cb3c3455 *R/CATparam.R
 aa3b69bfef2c4c823c63aebabbcc5474 *R/CATpmc.R
@@ -43,7 +43,7 @@ e0a33089086bd18fdd7e92985b9731c0 *R/pmc_internal.R
 70de6a633bd5cc42cbda77daa5bfb21c *inst/extdata/good-6d-2m-part.txt
 1be02663e33eeb1e54130a7ce380e051 *inst/pngFiles/ParameterTemplate.png
 71e14f1d9a4ec450ccfda3dbd80a74d8 *man/CATkit-package.Rd
-ca0ef1cfccc7c70f19dfc94760c29423 *man/CATparam.Rd
-4ec66a0ff629bdc676f551a7c194dc74 *man/CATpmc.Rd
+fa58eedc4c0fc186fddfb9db2aaf0bd9 *man/CATparam.Rd
+bf1980cee0f08c5732e51b3bed78eaee *man/CATpmc.Rd
 39ad93fee85f769d1f50a3f712506087 *man/CatCall.rd
 ec62c7a6e108dd11a44d982e672bc264 *man/CatCosinor.rd

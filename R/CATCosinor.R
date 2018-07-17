@@ -426,7 +426,7 @@ if (!exists("GraphSet")){
   MyDataRead$time=as.POSIXct(strptime(MyDataRead[,TimeCol], "%Y%m%d%H%M", tz=tz))     #   tz="GMT"
   # convert time to a number (time in seconds, converted into hours)
   # should probably be done with a hard coded time zone, so CDT and DST don't cause problems
-  
+  #####browser()
   if (is.na(RefDateTime)){
     RefTime <-as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y%m%d%H%M",tz=tz))                #  11/16 chg from timeFormat to "%Y%m%d%H%M": when RefDatTime=NA  Use StartTime as reference date-time
     RefTimeString <- MyDataRead[1,TimeCol]
@@ -434,6 +434,9 @@ if (!exists("GraphSet")){
       if (timeFormatOrig=="numeric"){
         RefTime<-as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y%m%d",tz=tz))     # midnight of first day of data   why would it be "%Y-%m-%d"??  changed
         RefTimeString <- paste(substr(MyDataRead[1,TimeCol],1,10),"0000",sep="")
+        if (is.na(RefTime)){
+          RefTime<-as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y-%m-%d",tz=tz))   #  when numeric and NA
+        } 
       } else {
         RefTime<-as.POSIXct(strptime(MyDataRead[1,TimeCol], "%Y%m%d",tz=tz))     # midnight of first day of data
         RefTimeString <- paste(substr(MyDataRead[1,TimeCol],1,8),"0000",sep="")
@@ -461,7 +464,7 @@ if (!exists("GraphSet")){
   #        MyData_hours:  based on these, the total hours to be analyzed is calculated.               #
   #                                                                                                   #
   #####################################################################################################
-  
+
   StartTime<-(as.numeric(as.POSIXct(strptime(StartDate, "%Y%m%d%H%M",tz=tz)))-as.numeric(RefTime))/3600      # convert to hours
   if (is.na(StartTime) ){
     message<-paste("ERROR:  StartTime or StartDate or Date format is invalid: StartTime",StartTime," StartDate: ",StartDate," RefTime:",RefTime)
@@ -488,7 +491,7 @@ if (!exists("GraphSet")){
     #  dt<-sumTab[median(which(sumTab == max(sumTab, na.rm=TRUE)))]
     dt<-median(sumTab, na.rm=TRUE)
   }
-
+#####browser()
   if (EndDate==tail(MyDataRead[,TimeCol],1) && StartDate==MyDataRead[1,TimeCol]){   # only add dt if using actual data points
     MyData_hours<-as.numeric(EndTime-StartTime) + dt         #   get number of hours to analyze
   }else{

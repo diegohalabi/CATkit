@@ -85,7 +85,13 @@ Returned:  An output data frame is returned from the function call, and printed 
                 # fileName<-file.path(filePath,'cos02x03.csv')
                 
                 # this line is used instead of the above since it is part of a package.
-                fileName<-system.file("extdata", "cos02x03.csv", package = "CATkit")
+                file.copy(system.file("extdata", "cos02x03.csv", package = "CATkit"), 
+                    tempdir(), overwrite = TRUE, recursive = FALSE, copy.mode = TRUE, 
+                    copy.date = FALSE)
+                filePath<-tempdir()
+                fileName<-file.path(filePath,'cos02x03.csv')
+
+                #fileName<-system.file("extdata", "cos02x03.csv", package = "CATkit")
                 CATparam(fileName=fileName, VarID=8, GrpID=c(5,10),header=TRUE,
                 sep=",",functionName="V8,G5,10", title="PMCtest V8,G5,10")
                 }
