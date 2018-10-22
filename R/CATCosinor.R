@@ -277,7 +277,7 @@ if (!exists("GraphSet")){
      MyDataReada <- read.table(fileName, header=header, sep=',', stringsAsFactors=FALSE, skip=Skip,colClasses=tableColTypes,blank.lines.skip=TRUE,na.strings=c(" ","--"))
   } # end if delimiter is comma
 
-  if (FALSE){     # for JAMES:  time not numeric, "%Y%m%d%H%M" only, only in 1 column, 1st column
+  if (FALSE){     # time not numeric, "%Y%m%d%H%M" only, only in 1 column, 1st column
     weirdHour<-as.integer(substr(MyDataReada[,1],9,10))    # get hour as integer  (all)
     weirdHourIdx<-which(weirdHour>23)                    # which hours are weird?  Index into character column
     weirdHourInt<-as.integer(substr(MyDataReada[weirdHourIdx,1],9,10))  #  get weird hours integer values
